@@ -1,0 +1,262 @@
+id: upscale_dtd_x2
+name: Upscale DTD x2
+description: Anime4K DTD (Directional Texture Detection) 2x upscaling algorithm with line darkening and adaptive thin line processing
+passes:
+  # Pass 1: Extract luminance
+  - id: luma_extraction
+    file: upscale_dtd_x2_pass1_luma.wgsl
+    inputs:
+      - id: SOURCE
+        binding: 0
+    outputs:
+      - id: lineluma
+        binding: 1
+        channels: 1
+        scale_factor: ["1", "1"]
+
+  # Pass 2: Gaussian blur X with SIGMA=1.0
+  - id: gaussian_x_1
+    file: upscale_dtd_x2_pass2_gaussian_x_1.wgsl
+    inputs:
+      - id: SOURCE
+        binding: 0
+      - id: lineluma
+        binding: 1
+    outputs:
+      - id: mmkernel_x1
+        binding: 2
+        channels: 1
+        scale_factor: ["1", "1"]
+
+  # Pass 3: Gaussian blur Y with SIGMA=1.0, compute difference
+  - id: gaussian_y_1
+    file: upscale_dtd_x2_pass3_gaussian_y_1.wgsl
+    inputs:
+      - id: SOURCE
+        binding: 0
+      - id: lineluma
+        binding: 1
+      - id: mmkernel_x1
+        binding: 2
+    outputs:
+      - id: mmkernel_y1
+        binding: 3
+        channels: 1
+        scale_factor: ["1", "1"]
+
+  # Pass 4: Gaussian blur X with SIGMA=0.4
+  - id: gaussian_x_04
+    file: upscale_dtd_x2_pass4_gaussian_x_04.wgsl
+    inputs:
+      - id: SOURCE
+        binding: 0
+      - id: mmkernel_y1
+        binding: 1
+    outputs:
+      - id: mmkernel_x04
+        binding: 2
+        channels: 1
+        scale_factor: ["1", "1"]
+
+  # Pass 5: Gaussian blur Y with SIGMA=0.4
+  - id: gaussian_y_04
+    file: upscale_dtd_x2_pass5_gaussian_y_04.wgsl
+    inputs:
+      - id: SOURCE
+        binding: 0
+      - id: mmkernel_x04
+        binding: 1
+    outputs:
+      - id: mmkernel_y04
+        binding: 2
+        channels: 1
+        scale_factor: ["1", "1"]
+
+  # Pass 6: Apply line darkening
+  - id: apply_darkening
+    file: upscale_dtd_x2_pass6_apply_darkening.wgsl
+    inputs:
+      - id: SOURCE
+        binding: 0
+      - id: mmkernel_y04
+        binding: 1
+    outputs:
+      - id: darkened
+        binding: 2
+        channels: 4
+        scale_factor: ["1", "1"]
+
+  # Pass 7: Extract luminance for thin line processing
+  - id: luma_extraction_2
+    file: upscale_dtd_x2_pass7_luma_2.wgsl
+    inputs:
+      - id: darkened
+        binding: 0
+    outputs:
+      - id: lineluma2
+        binding: 1
+        channels: 1
+        scale_factor: ["1", "1"]
+
+  # Pass 8: Compute gradients X
+  - id: gradient_x
+    file: upscale_dtd_x2_pass8_gradient_x.wgsl
+    inputs:
+      - id: darkened
+        binding: 0
+      - id: lineluma2
+        binding: 1
+    outputs:
+      - id: lumad_x
+        binding: 2
+        channels: 2
+        scale_factor: ["1", "1"]
+
+  # Pass 9: Compute gradients Y and magnitude
+  - id: gradient_y
+    file: upscale_dtd_x2_pass9_gradient_y.wgsl
+    inputs:
+      - id: darkened
+        binding: 0
+      - id: lumad_x
+        binding: 1
+    outputs:
+      - id: lumad_y
+        binding: 2
+        channels: 1
+        scale_factor: ["1", "1"]
+
+  # Pass 10: Gaussian blur on gradients X
+  - id: gradient_gaussian_x
+    file: upscale_dtd_x2_pass10_gradient_gaussian_x.wgsl
+    inputs:
+      - id: darkened
+        binding: 0
+      - id: lumad_y
+        binding: 1
+    outputs:
+      - id: lumadg_x
+        binding: 2
+        channels: 1
+        scale_factor: ["1", "1"]
+
+  # Pass 11: Gaussian blur on gradients Y
+  - id: gradient_gaussian_y
+    file: upscale_dtd_x2_pass11_gradient_gaussian_y.wgsl
+    inputs:
+      - id: darkened
+        binding: 0
+      - id: lumad_y
+        binding: 1
+      - id: lumadg_x
+        binding: 2
+    outputs:
+      - id: lumad_final
+        binding: 3
+        channels: 1
+        scale_factor: ["1", "1"]
+
+  # Pass 12: Compute second gradients X
+  - id: gradient_2_x
+    file: upscale_dtd_x2_pass12_gradient_2_x.wgsl
+    inputs:
+      - id: darkened
+        binding: 0
+      - id: lumad_final
+        binding: 1
+    outputs:
+      - id: lumad2_x
+        binding: 2
+        channels: 2
+        scale_factor: ["1", "1"]
+
+  # Pass 13: Compute second gradients Y
+  - id: gradient_2_y
+    file: upscale_dtd_x2_pass13_gradient_2_y.wgsl
+    inputs:
+      - id: darkened
+        binding: 0
+      - id: lumad2_x
+        binding: 1
+    outputs:
+      - id: lumad2_y
+        binding: 2
+        channels: 2
+        scale_factor: ["1", "1"]
+
+  # Pass 14: Upscale and warp
+  - id: upscale_warp
+    file: upscale_dtd_x2_pass14_upscale_warp.wgsl
+    inputs:
+      - id: darkened
+        binding: 0
+      - id: lumad2_y
+        binding: 2
+    outputs:
+      - id: maintempthin
+        binding: 4
+        channels: 4
+        scale_factor: ["2", "2"]
+    samplers:
+      - binding: 1
+      - binding: 3
+
+  # Pass 15: Extract upscaled luminance
+  - id: upscaled_luma
+    file: upscale_dtd_x2_pass15_upscaled_luma.wgsl
+    inputs:
+      - id: darkened
+        binding: 0
+      - id: maintempthin
+        binding: 1
+    outputs:
+      - id: maintemp
+        binding: 2
+        channels: 1
+        scale_factor: ["2", "2"]
+
+  # Pass 16: Min/max kernel X
+  - id: minmax_kernel_x
+    file: upscale_dtd_x2_pass16_minmax_kernel_x.wgsl
+    inputs:
+      - id: darkened
+        binding: 0
+      - id: maintemp
+        binding: 1
+    outputs:
+      - id: mmkernel_x
+        binding: 2
+        channels: 3
+        scale_factor: ["2", "2"]
+
+  # Pass 17: Min/max kernel Y
+  - id: minmax_kernel_y
+    file: upscale_dtd_x2_pass17_minmax_kernel_y.wgsl
+    inputs:
+      - id: darkened
+        binding: 0
+      - id: mmkernel_x
+        binding: 1
+    outputs:
+      - id: mmkernel_y
+        binding: 2
+        channels: 3
+        scale_factor: ["2", "2"]
+
+  # Pass 18: Final upscale apply
+  - id: final_apply
+    file: upscale_dtd_x2_pass18_final_apply.wgsl
+    inputs:
+      - id: darkened
+        binding: 0
+      - id: maintempthin
+        binding: 1
+      - id: maintemp
+        binding: 2
+      - id: mmkernel_y
+        binding: 3
+    outputs:
+      - id: RESULT
+        binding: 4
+        channels: 4
+        scale_factor: ["2", "2"]

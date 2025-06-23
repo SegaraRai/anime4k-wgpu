@@ -1,0 +1,24 @@
+[package]
+name = "anime4k-wgpu-build"
+version = "1.0.0"
+edition = "2024"
+
+[[bin]]
+name = "analyze"
+path = "src/bin/analyze.rs"
+
+[dependencies]
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+serde_norway = "0.9"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread"] }
+futures-intrusive = "0.5"
+pollster = "0.4"
+half = { version = "2", features = ["bytemuck"] }
+bytes = "1"
+bytemuck = { version = "1", features = ["derive"] }
+thiserror = "2"
+image = "0.25"
+wgpu = { version = "25", features = ["glsl"] }

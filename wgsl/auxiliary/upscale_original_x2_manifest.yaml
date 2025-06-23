@@ -1,0 +1,76 @@
+id: upscale_original_x2
+name: Upscale Original x2
+description: Original Anime4K 2x upscaling algorithm using gradient analysis
+passes:
+  - id: luma_extraction
+    file: upscale_original_x2_pass1_luma.wgsl
+    inputs:
+      - id: SOURCE
+        binding: 0
+    outputs:
+      - id: luma
+        binding: 1
+        channels: 1
+        scale_factor: ["1", "1"]
+  - id: x_gradient
+    file: upscale_original_x2_pass2_kernel_x.wgsl
+    inputs:
+      - id: SOURCE
+        binding: 0
+      - id: luma
+        binding: 1
+    outputs:
+      - id: lumad_x
+        binding: 3
+        channels: 2
+        scale_factor: ["2", "2"]
+    samplers:
+      - binding: 2
+  - id: y_gradient
+    file: upscale_original_x2_pass3_kernel_y.wgsl
+    inputs:
+      - id: lumad_x
+        binding: 0
+    outputs:
+      - id: lumad_y
+        binding: 1
+        channels: 2
+        scale_factor: ["2", "2"]
+  - id: x_gradient_2
+    file: upscale_original_x2_pass4_kernel_x2.wgsl
+    inputs:
+      - id: lumad_y
+        binding: 0
+    outputs:
+      - id: lumamm_x
+        binding: 1
+        channels: 2
+        scale_factor: ["2", "2"]
+  - id: y_gradient_2
+    file: upscale_original_x2_pass5_kernel_y2.wgsl
+    inputs:
+      - id: lumad_y
+        binding: 0
+      - id: lumamm_x
+        binding: 1
+    outputs:
+      - id: lumamm_y
+        binding: 2
+        channels: 2
+        scale_factor: ["2", "2"]
+  - id: upscale_apply
+    file: upscale_original_x2_pass6_apply.wgsl
+    inputs:
+      - id: SOURCE
+        binding: 0
+      - id: lumad_y
+        binding: 2
+      - id: lumamm_y
+        binding: 3
+    outputs:
+      - id: RESULT
+        binding: 4
+        channels: 4
+        scale_factor: ["2", "2"]
+    samplers:
+      - binding: 1

@@ -1,0 +1,6 @@
+target
+
+*.h264
+*.png
+
+!example_image.png

@@ -1,0 +1,86 @@
+id: deblur_original
+name: Deblur Original
+description: Original Anime4K deblurring algorithm using gradient analysis and directional filtering
+passes:
+  - id: luma_extraction
+    file: deblur_original_pass1_luma.wgsl
+    inputs:
+      - id: SOURCE
+        binding: 0
+    outputs:
+      - id: luma
+        binding: 1
+        channels: 1
+        scale_factor: ["1", "1"]
+  - id: x_gradient
+    file: deblur_original_pass2_kernel_x.wgsl
+    inputs:
+      - id: luma
+        binding: 0
+    outputs:
+      - id: lumad_x
+        binding: 2
+        channels: 2
+        scale_factor: ["2", "2"]
+    samplers:
+      - binding: 1
+  - id: y_gradient
+    file: deblur_original_pass3_kernel_y.wgsl
+    inputs:
+      - id: lumad_x
+        binding: 0
+    outputs:
+      - id: lumad_y
+        binding: 1
+        channels: 2
+        scale_factor: ["2", "2"]
+  - id: x_gradient_2
+    file: deblur_original_pass4_kernel_x2.wgsl
+    inputs:
+      - id: lumad_y
+        binding: 0
+    outputs:
+      - id: lumamm_x
+        binding: 1
+        channels: 2
+        scale_factor: ["2", "2"]
+  - id: y_gradient_2
+    file: deblur_original_pass5_kernel_y2.wgsl
+    inputs:
+      - id: lumad_y
+        binding: 0
+      - id: lumamm_x
+        binding: 1
+    outputs:
+      - id: lumamm_y
+        binding: 2
+        channels: 2
+        scale_factor: ["2", "2"]
+  - id: apply_deblur
+    file: deblur_original_pass6_apply.wgsl
+    inputs:
+      - id: SOURCE
+        binding: 0
+      - id: lumad_y
+        binding: 2
+      - id: lumamm_y
+        binding: 3
+    outputs:
+      - id: resample
+        binding: 4
+        channels: 4
+        scale_factor: ["2", "2"]
+    samplers:
+      - binding: 1
+  - id: resample
+    file: deblur_original_pass7_resample.wgsl
+    inputs:
+      - id: resample
+        binding: 0
+    outputs:
+      - id: RESULT
+        binding: 2
+        channels: 4
+        scale_factor: ["1", "1"]
+    samplers:
+      - binding: 1

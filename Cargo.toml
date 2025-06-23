@@ -1,0 +1,3 @@
+[workspace]
+resolver = "3"
+members = ["crates/anime4k-wgpu", "crates/build", "crates/verification"]

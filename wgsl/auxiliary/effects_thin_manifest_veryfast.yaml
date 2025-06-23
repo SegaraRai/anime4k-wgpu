@@ -1,0 +1,93 @@
+id: effects_thin_veryfast
+name: Effects Thin VeryFast
+description: Fast thinning effect using edge detection and directional warping
+passes:
+  - id: luma_extraction
+    file: effects_thin_pass1_luma_scaling.wgsl
+    inputs:
+      - id: SOURCE
+        binding: 0
+    outputs:
+      - id: luma
+        binding: 2
+        channels: 1
+        scale_factor: ["1/2", "1/2"]
+    samplers:
+      - binding: 1
+  - id: sobel_x
+    file: effects_thin_pass2_sobel_x_scaling.wgsl
+    inputs:
+      - id: luma
+        binding: 0
+    outputs:
+      - id: sobel_x
+        binding: 2
+        channels: 2
+        scale_factor: ["1/4", "1/4"]
+    samplers:
+      - binding: 1
+  - id: sobel_y
+    file: effects_thin_pass3_sobel_y.wgsl
+    inputs:
+      - id: sobel_x
+        binding: 0
+    outputs:
+      - id: sobel_y
+        binding: 1
+        channels: 1
+        scale_factor: ["1/4", "1/4"]
+  - id: gaussian_x
+    file: effects_thin_pass4_gaussian_x.wgsl
+    inputs:
+      - id: sobel_y
+        binding: 0
+    outputs:
+      - id: gaussian_x
+        binding: 1
+        channels: 1
+        scale_factor: ["1/4", "1/4"]
+  - id: gaussian_y
+    file: effects_thin_pass5_gaussian_y.wgsl
+    inputs:
+      - id: gaussian_x
+        binding: 0
+    outputs:
+      - id: gaussian_y
+        binding: 1
+        channels: 1
+        scale_factor: ["1/4", "1/4"]
+  - id: kernel_x
+    file: effects_thin_pass6_kernel_x.wgsl
+    inputs:
+      - id: gaussian_y
+        binding: 0
+    outputs:
+      - id: kernel_x
+        binding: 1
+        channels: 2
+        scale_factor: ["1/4", "1/4"]
+  - id: kernel_y
+    file: effects_thin_pass7_kernel_y.wgsl
+    inputs:
+      - id: kernel_x
+        binding: 0
+    outputs:
+      - id: kernel_y
+        binding: 1
+        channels: 2
+        scale_factor: ["1/4", "1/4"]
+  - id: warp_apply
+    file: effects_thin_pass8_warp.wgsl
+    inputs:
+      - id: SOURCE
+        binding: 0
+      - id: kernel_y
+        binding: 2
+    outputs:
+      - id: RESULT
+        binding: 4
+        channels: 4
+        scale_factor: ["1", "1"]
+    samplers:
+      - binding: 1
+      - binding: 3

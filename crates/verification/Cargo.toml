@@ -1,0 +1,36 @@
+[package]
+name = "anime4k-wgpu-verification"
+version = "1.0.0"
+edition = "2024"
+
+[dependencies]
+anime4k-wgpu-build = { path = "../build" }
+tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread"] }
+futures-intrusive = "0.5"
+pollster = "0.4"
+half = { version = "2", features = ["bytemuck"] }
+bytes = "1"
+bytemuck = { version = "1", features = ["derive"] }
+thiserror = "2"
+image = "0.25"
+wgpu = { version = "25", features = ["glsl"] }
+regex = "1"
+
+[build-dependencies]
+anime4k-wgpu-build = { path = "../build" }
+
+[[bin]]
+name = "glsl_reference_engine"
+path = "src/bin/glsl_reference_engine.rs"
+
+[[bin]]
+name = "wgsl_reference_engine"
+path = "src/bin/wgsl_reference_engine.rs"
+
+[[bin]]
+name = "verify_aux"
+path = "src/bin/verify_aux.rs"
+
+[[bin]]
+name = "verify_cnn"
+path = "src/bin/verify_cnn.rs"

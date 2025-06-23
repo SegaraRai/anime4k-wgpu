@@ -1,0 +1,31 @@
+// MIT License
+// Copyright (c) 2019-2021 bloc97
+// Ported to WGSL for anime4k-wgpu
+
+@group(0) @binding(0) var input_texture: texture_2d<f32>; // source texture (HOOKED, 4ch x1)
+@group(0) @binding(1) var output_texture: texture_storage_2d<r32float, write>; // luminance data (1ch x1)
+
+fn get_luma(rgba: vec4f) -> f32 {
+    return dot(vec4f(0.299, 0.587, 0.114, 0.0), rgba);
+}
+
+fn process(pos: vec2i) {
+    let color = textureLoad(input_texture, pos, 0);
+    let luma = get_luma(color);
+    textureStore(output_texture, pos, vec4f(luma, 0.0, 0.0, 1.0));
+}
+
+@compute @workgroup_size(8, 8)
+fn main(@builtin(global_invocation_id) global_id: vec3u) {
+    let dims = textureDimensions(output_texture);
+    if global_id.x >= dims.x || global_id.y >= dims.y {
+        return;
+    }
+
+    process(vec2i(global_id.xy));
+}
+
+@compute @workgroup_size(8, 8)
+fn main_unchecked(@builtin(global_invocation_id) global_id: vec3u) {
+    process(vec2i(global_id.xy));
+}

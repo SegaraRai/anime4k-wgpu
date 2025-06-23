@@ -1,0 +1,38 @@
+id: clamp_highlights
+name: Clamp Highlights
+description: Clamps the maximum luminance in each region to reduce overexposure
+passes:
+  - id: compute_stats_x
+    file: clamp_highlights_pass1_compute_stats_x.wgsl
+    inputs:
+      - id: SOURCE
+        binding: 0
+    outputs:
+      - id: stats_x
+        binding: 1
+        channels: 1
+        scale_factor: ["1", "1"]
+  - id: compute_stats_y
+    file: clamp_highlights_pass2_compute_stats_y.wgsl
+    inputs:
+      - id: SOURCE
+        binding: 0
+      - id: stats_x
+        binding: 1
+    outputs:
+      - id: stats_y
+        binding: 2
+        channels: 1
+        scale_factor: ["1", "1"]
+  - id: clamp_highlights
+    file: clamp_highlights_pass3_clamp.wgsl
+    inputs:
+      - id: SOURCE
+        binding: 0
+      - id: stats_y
+        binding: 1
+    outputs:
+      - id: RESULT
+        binding: 2
+        channels: 4
+        scale_factor: ["1", "1"]
