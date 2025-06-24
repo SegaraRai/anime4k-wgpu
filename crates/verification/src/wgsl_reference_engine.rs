@@ -43,8 +43,6 @@ pub struct WgslReferenceEngine {
     device: wgpu::Device,
     /// The wgpu command queue
     queue: wgpu::Queue,
-    /// Whether the device supports filterable 32-bit float textures
-    has_float32_filterable: bool,
 }
 
 /// Pipeline processor that manages execution of an analyzed pipeline
@@ -99,14 +97,7 @@ impl WgslReferenceEngine {
             })
             .await?;
 
-        // Check if the device actually supports FLOAT32_FILTERABLE
-        let has_float32_filterable = device.features().contains(wgpu::Features::FLOAT32_FILTERABLE);
-
-        Ok(Self {
-            device,
-            queue,
-            has_float32_filterable,
-        })
+        Ok(Self { device, queue })
     }
 }
 
@@ -122,9 +113,8 @@ impl PipelineProcessor {
     /// # Returns
     /// A configured pipeline processor ready for execution
     pub fn new_from_file(engine: WgslReferenceEngine, pipeline_path: &str, input_path: &str, log: bool) -> Result<Self, Box<dyn std::error::Error>> {
-        // Load input image and determine appropriate texture format
-        let format = determine_texture_format(engine.has_float32_filterable);
-        let input_texture = load_image_file_as_texture(&engine.device, &engine.queue, input_path, format)?;
+        // Load input image
+        let input_texture = load_image_file_as_texture(&engine.device, &engine.queue, input_path)?;
 
         let wgpu::Extent3d {
             width: input_width,
@@ -165,8 +155,7 @@ impl PipelineProcessor {
         log: bool,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         // Load input image
-        let format = determine_texture_format(engine.has_float32_filterable);
-        let input_texture = load_image_as_texture(&engine.device, &engine.queue, input_image, format)?;
+        let input_texture = load_image_as_texture(&engine.device, &engine.queue, input_image)?;
 
         let wgpu::Extent3d {
             width: input_width,
@@ -229,30 +218,19 @@ impl PipelineProcessor {
         ExecutablePipeline::from_file(pipeline_path, load_shader_file)
     }
 
-    /// Determines the appropriate texture format based on channel count and device capabilities
+    /// Determines the appropriate texture format based on component count
     ///
     /// # Arguments
-    /// * `channels` - Number of color channels (1-4)
+    /// * `components` - Number of color components (1-4)
     ///
     /// # Returns
-    /// The most appropriate texture format for the given channel count
-    fn get_texture_format_for_channels(&self, channels: u32) -> wgpu::TextureFormat {
-        if !self.engine.has_float32_filterable {
-            // Use filterable 16-bit formats when 32-bit filtering is not supported
-            match channels {
-                1 => wgpu::TextureFormat::R16Float,        // Single channel, 16-bit float
-                2 => wgpu::TextureFormat::Rg16Float,       // Two channels, 16-bit float
-                3 | 4 => wgpu::TextureFormat::Rgba16Float, // 3 or 4 channels, 16-bit float (no RGB16Float)
-                _ => wgpu::TextureFormat::Rgba16Float,     // Default fallback
-            }
-        } else {
-            // Use high precision 32-bit formats when device supports float32 filtering
-            match channels {
-                1 => wgpu::TextureFormat::R32Float,        // Single channel, 32-bit float
-                2 => wgpu::TextureFormat::Rg32Float,       // Two channels, 32-bit float
-                3 | 4 => wgpu::TextureFormat::Rgba32Float, // 3 or 4 channels, 32-bit float
-                _ => wgpu::TextureFormat::Rgba32Float,     // Default fallback
-            }
+    /// The most appropriate texture format for the given component count
+    fn get_texture_format_for_components(&self, components: u32) -> wgpu::TextureFormat {
+        match components {
+            1 => wgpu::TextureFormat::R32Float,        // Single component, 32-bit float
+            2 => wgpu::TextureFormat::Rg32Float,       // Two components, 32-bit float
+            3 | 4 => wgpu::TextureFormat::Rgba32Float, // 3 or 4 components, 32-bit float
+            _ => wgpu::TextureFormat::Rgba32Float,     // Default fallback
         }
     }
 
@@ -384,25 +362,12 @@ impl PipelineProcessor {
 
             // Add output texture bindings for writing shader results
             for output in &shader_pass.output_textures {
-                // Determine appropriate format based on channel count
-                let format = self.get_texture_format_for_channels(output.channels);
-                // Map to storage texture format (must match exactly for write operations)
-                let storage_format = match format {
-                    wgpu::TextureFormat::R32Float => wgpu::TextureFormat::R32Float,
-                    wgpu::TextureFormat::Rg32Float => wgpu::TextureFormat::Rg32Float,
-                    wgpu::TextureFormat::Rgba32Float => wgpu::TextureFormat::Rgba32Float,
-                    wgpu::TextureFormat::R16Float => wgpu::TextureFormat::R16Float,
-                    wgpu::TextureFormat::Rg16Float => wgpu::TextureFormat::Rg16Float,
-                    wgpu::TextureFormat::Rgba16Float => wgpu::TextureFormat::Rgba16Float,
-                    _ => wgpu::TextureFormat::Rgba32Float, // Fallback to RGBA32Float
-                };
-
                 bind_group_layout_entries.push(wgpu::BindGroupLayoutEntry {
                     binding: output.binding,
                     visibility: wgpu::ShaderStages::COMPUTE,
                     ty: wgpu::BindingType::StorageTexture {
                         access: wgpu::StorageTextureAccess::WriteOnly,
-                        format: storage_format,
+                        format: self.get_texture_format_for_channels(output.channels),
                         view_dimension: wgpu::TextureViewDimension::D2,
                     },
                     count: None,

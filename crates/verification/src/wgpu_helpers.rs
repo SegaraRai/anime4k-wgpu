@@ -52,23 +52,6 @@ pub fn create_sampler(device: &wgpu::Device, filter_mode: SamplerFilterMode) -> 
     })
 }
 
-/// Determines the appropriate texture format based on device capabilities
-///
-/// # Arguments
-/// * `has_float32_filterable` - Whether the device supports filterable 32-bit float textures
-///
-/// # Returns
-/// The recommended texture format (Rgba32Float if supported, otherwise Rgba16Float)
-pub fn determine_texture_format(has_float32_filterable: bool) -> wgpu::TextureFormat {
-    if !has_float32_filterable {
-        // Fall back to 16-bit float if 32-bit float filtering is not supported
-        wgpu::TextureFormat::Rgba16Float
-    } else {
-        // Use 32-bit float for maximum precision when available
-        wgpu::TextureFormat::Rgba32Float
-    }
-}
-
 /// Creates a 2D texture with the specified parameters
 ///
 /// # Arguments
@@ -103,17 +86,16 @@ pub fn create_texture(device: &wgpu::Device, width: u32, height: u32, format: wg
 /// * `device` - The wgpu device
 /// * `queue` - The wgpu command queue
 /// * `image` - The source image to load
-/// * `format` - The desired texture format
 ///
 /// # Returns
-/// A texture containing the image data
-pub fn load_image_as_texture(device: &wgpu::Device, queue: &wgpu::Queue, image: &image::DynamicImage, format: wgpu::TextureFormat) -> Result<wgpu::Texture, Box<dyn std::error::Error>> {
+/// A Rgba32Float texture containing the image data
+pub fn load_image_as_texture(device: &wgpu::Device, queue: &wgpu::Queue, image: &image::DynamicImage) -> Result<wgpu::Texture, Box<dyn std::error::Error>> {
     // Convert image to RGBA32F format for consistent processing
     let rgba_image = image.to_rgba32f();
     let (width, height) = rgba_image.dimensions();
 
     // Create texture with input usage flags
-    let texture = create_texture(device, width, height, format, TEXTURE_USAGE_INPUT);
+    let texture = create_texture(device, width, height, wgpu::TextureFormat::Rgba32Float, TEXTURE_USAGE_INPUT);
 
     // Upload image data to the texture
     queue.write_texture(
@@ -146,13 +128,12 @@ pub fn load_image_as_texture(device: &wgpu::Device, queue: &wgpu::Queue, image: 
 /// * `device` - The wgpu device
 /// * `queue` - The wgpu command queue
 /// * `image_path` - Path to the image file
-/// * `format` - The desired texture format
 ///
 /// # Returns
-/// A texture containing the loaded image data
-pub fn load_image_file_as_texture(device: &wgpu::Device, queue: &wgpu::Queue, image_path: &str, format: wgpu::TextureFormat) -> Result<wgpu::Texture, Box<dyn std::error::Error>> {
+/// A Rgba32Float texture containing the loaded image data
+pub fn load_image_file_as_texture(device: &wgpu::Device, queue: &wgpu::Queue, image_path: &str) -> Result<wgpu::Texture, Box<dyn std::error::Error>> {
     // Open the image file and load it into a texture
-    load_image_as_texture(device, queue, &image::open(image_path)?, format)
+    load_image_as_texture(device, queue, &image::open(image_path)?)
 }
 
 /// Reads a wgpu texture back to an RGBA32F image

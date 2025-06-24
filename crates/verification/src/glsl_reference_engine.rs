@@ -56,8 +56,6 @@ pub struct GlslReferenceEngine {
     queue: wgpu::Queue,
     /// Cache of compiled shader modules
     shader_cache: HashMap<String, wgpu::ShaderModule>,
-    /// Whether the device supports filterable 32-bit float textures
-    has_float32_filterable: bool,
 }
 
 /// Image processor that manages texture state during pipeline execution
@@ -230,48 +228,27 @@ impl MpvHook {
         Ok((width, height))
     }
 
-    /// Determines the appropriate texture format based on component count and device capabilities
-    ///
-    /// # Arguments
-    /// * `has_float32_filterable` - Whether the device supports filterable 32-bit float textures
+    /// Determines the appropriate texture format based on component count
     ///
     /// # Returns
     /// The appropriate texture format for this hook's output
-    fn get_output_format_with_filtering(&self, has_float32_filterable: bool) -> wgpu::TextureFormat {
-        // Get component count from COMPONENTS directive or use default (4)
-        let component_count = self.components.unwrap_or(DEFAULT_COMPONENTS);
-
-        if !has_float32_filterable {
-            // Use 16-bit filterable formats when 32-bit float filtering is not supported
-            // All 16-bit float formats are filterable by default
-            match component_count {
-                1 => wgpu::TextureFormat::R16Float,    // Single channel, 16-bit float
-                2 => wgpu::TextureFormat::Rg16Float,   // Two channels, 16-bit float
-                3 => wgpu::TextureFormat::Rgba16Float, // Use RGBA for 3-component (no RGB16Float)
-                4 => wgpu::TextureFormat::Rgba16Float, // Four channels, 16-bit float
-                _ => wgpu::TextureFormat::Rgba16Float, // Default fallback
-            }
-        } else {
-            // Use high precision 32-bit formats when device supports float32 filtering
-            match component_count {
-                1 => wgpu::TextureFormat::R32Float,    // Single channel, 32-bit float
-                2 => wgpu::TextureFormat::Rg32Float,   // Two channels, 32-bit float
-                3 => wgpu::TextureFormat::Rgba32Float, // Use RGBA for 3-component (no RGB32Float)
-                4 => wgpu::TextureFormat::Rgba32Float, // Four channels, 32-bit float
-                _ => wgpu::TextureFormat::Rgba32Float, // Default fallback
-            }
+    fn get_output_format(&self) -> wgpu::TextureFormat {
+        match self.components.unwrap_or(DEFAULT_COMPONENTS) {
+            1 => wgpu::TextureFormat::R32Float,        // Single component, 32-bit float
+            2 => wgpu::TextureFormat::Rg32Float,       // Two components, 32-bit float
+            3 | 4 => wgpu::TextureFormat::Rgba32Float, // 3 or 4 components, 32-bit float
+            _ => wgpu::TextureFormat::Rgba32Float,     // Default fallback
         }
     }
 
-    /// Converts the GLSL hook to a WGSL compute shader
+    /// Converts the GLSL hook to a GLSL compute shader
     ///
     /// # Arguments
     /// * `texture_formats` - Map of texture names to their formats for binding generation
-    /// * `has_float32_filterable` - Whether the device supports filterable 32-bit float textures
     ///
     /// # Returns
-    /// A complete WGSL compute shader string
-    fn convert_to_compute_shader(&self, texture_formats: &HashMap<String, wgpu::TextureFormat>, has_float32_filterable: bool) -> String {
+    /// A complete GLSL compute shader string
+    fn convert_to_compute_shader(&self, texture_formats: &HashMap<String, wgpu::TextureFormat>) -> String {
         let mut compute_shader = String::new();
 
         // Add GLSL version and compute shader layout
@@ -291,9 +268,6 @@ impl MpvHook {
                         wgpu::TextureFormat::R32Float => "r32f",       // Single channel 32-bit float
                         wgpu::TextureFormat::Rg32Float => "rg32f",     // Two channel 32-bit float
                         wgpu::TextureFormat::Rgba32Float => "rgba32f", // Four channel 32-bit float
-                        wgpu::TextureFormat::R16Float => "r16f",       // Single channel 16-bit float
-                        wgpu::TextureFormat::Rg16Float => "rg16f",     // Two channel 16-bit float
-                        wgpu::TextureFormat::Rgba16Float => "rgba16f", // Four channel 16-bit float
                         _ => "rgba32f",                                // Default fallback
                     };
                     format!("layout(binding = {}, {}) uniform {} image2D {};\n", binding_index, format_string, access_type, texture_name)
@@ -304,9 +278,6 @@ impl MpvHook {
                         wgpu::TextureFormat::R32Float => "r32f",
                         wgpu::TextureFormat::Rg32Float => "rg32f",
                         wgpu::TextureFormat::Rgba32Float => "rgba32f",
-                        wgpu::TextureFormat::R16Float => "r16f",
-                        wgpu::TextureFormat::Rg16Float => "rg16f",
-                        wgpu::TextureFormat::Rgba16Float => "rgba16f",
                         _ => "rgba32f", // Default fallback
                     };
                     format!("layout(binding = {}, {}) uniform {} image2D {};\n", binding_index, format_string, access_type, texture_name)
@@ -461,7 +432,7 @@ vec4 {input}_texLinear(vec2 pos) {{
         }
 
         // 4. Add output texture binding (uses high binding number to avoid conflicts)
-        let output_format = self.get_output_format_with_filtering(has_float32_filterable);
+        let output_format = self.get_output_format();
         compute_shader.push_str(&generate_texture_binding(100, "output_tex", "writeonly", output_format));
 
         // 5. Add sampler binding for texture filtering
@@ -517,7 +488,6 @@ impl GlslReferenceEngine {
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
                 label: Some("GLSL Reference Engine"),
-                // Request features needed for float texture filtering and format-specific operations
                 required_features: wgpu::Features::FLOAT32_FILTERABLE,
                 required_limits: wgpu::Limits::default(),
                 memory_hints: wgpu::MemoryHints::default(),
@@ -525,15 +495,10 @@ impl GlslReferenceEngine {
             })
             .await?;
 
-        // Check if the device actually supports FLOAT32_FILTERABLE feature
-        // (it might not be available even if requested, depending on the platform)
-        let has_float32_filterable = device.features().contains(wgpu::Features::FLOAT32_FILTERABLE);
-
         Ok(Self {
             device,
             queue,
             shader_cache: HashMap::new(), // Initialize empty cache for compiled shaders
-            has_float32_filterable,
         })
     }
 
@@ -598,7 +563,7 @@ impl ImageProcessor {
     /// Builds a mapping of texture names to their GPU formats
     ///
     /// Analyzes the shader pipeline to determine appropriate texture formats
-    /// for each intermediate texture based on usage patterns and device capabilities.
+    /// for each intermediate texture based on component counts.
     ///
     /// # Arguments
     /// * `hooks` - The shader hooks that define the pipeline
@@ -619,7 +584,7 @@ impl ImageProcessor {
             let save_name = hook.save.as_deref().unwrap_or("MAIN");
 
             // Get the output format for this hook based on its component count
-            let format = hook.get_output_format_with_filtering(self.engine.has_float32_filterable);
+            let format = hook.get_output_format();
             texture_formats.insert(save_name.to_string(), format);
 
             // If this hook modifies MAIN, update HOOKED to match
@@ -805,14 +770,14 @@ impl ImageProcessor {
         let (output_width, output_height) = hook.calculate_output_size(&self.intermediate_textures)?;
 
         // Create output texture with appropriate format based on component count
-        let output_format = hook.get_output_format_with_filtering(self.engine.has_float32_filterable);
+        let output_format = hook.get_output_format();
         let output_texture = create_texture(&self.engine.device, output_width, output_height, output_format, TEXTURE_USAGE_STORAGE);
 
         // Build texture format map using actual formats of current intermediate textures
         let texture_formats = self.build_dynamic_texture_format_map();
 
         // Convert the mpv-style GLSL hook to a compute shader with proper bindings
-        let compute_shader_source = hook.convert_to_compute_shader(&texture_formats, self.engine.has_float32_filterable);
+        let compute_shader_source = hook.convert_to_compute_shader(&texture_formats);
 
         // Compile the compute shader into a shader module (with caching)
         let shader_name = format!("hook_{hook_index}");
@@ -877,9 +842,8 @@ impl ImageProcessor {
             println!("- Hook {i}: {} ({})", hook.desc, hook.hook);
         }
 
-        // Load input image with appropriate format for the device capabilities
-        let format = determine_texture_format(self.engine.has_float32_filterable);
-        let input_texture = load_image_file_as_texture(&self.engine.device, &self.engine.queue, input_path, format)?;
+        // Load input image
+        let input_texture = load_image_file_as_texture(&self.engine.device, &self.engine.queue, input_path)?;
 
         // Initialize the pipeline texture state with the input image
         self.initialize_pipeline_textures(input_texture);
@@ -923,9 +887,8 @@ impl ImageProcessor {
         // Parse mpv hooks from the provided GLSL source
         let hooks = MpvHook::parse_from_glsl(shader_source)?;
 
-        // Convert input image to GPU texture with appropriate format
-        let format = determine_texture_format(self.engine.has_float32_filterable);
-        let input_texture = load_image_as_texture(&self.engine.device, &self.engine.queue, input_image, format)?;
+        // Convert input image to GPU texture
+        let input_texture = load_image_as_texture(&self.engine.device, &self.engine.queue, input_image)?;
 
         // Initialize pipeline texture state with the input image
         self.initialize_pipeline_textures(input_texture);
@@ -1009,7 +972,7 @@ pub async fn analyze_shader(shader_path: &str) -> Result<(), Box<dyn std::error:
                 demo_formats.insert(input.clone(), wgpu::TextureFormat::Rgba32Float);
             }
         }
-        let standard_shader = hook.convert_to_compute_shader(&demo_formats, true);
+        let standard_shader = hook.convert_to_compute_shader(&demo_formats);
         println!("{standard_shader}");
 
         println!("\n{}", "=".repeat(80));
