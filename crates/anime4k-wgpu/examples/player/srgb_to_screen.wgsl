@@ -33,5 +33,5 @@ fn vs_main(input: VertexInput) -> VertexOutput {
 
 @fragment
 fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
-    return textureSample(rgb_texture, input_sampler, input.tex_coords);
+    return textureSampleLevel(rgb_texture, input_sampler, input.tex_coords, 0.0);
 }

@@ -28,6 +28,9 @@ use winit::{
 /// between latency and smooth playback.
 const FRAME_BUFFER_LENGTH: usize = 3;
 
+const YUV_COMPUTE_WORKGROUP_X: u32 = 8;
+const YUV_COMPUTE_WORKGROUP_Y: u32 = 8;
+
 /// Core video player context managing playback state and rendering pipeline
 ///
 /// `PlayerContext` serves as the central coordinator for all video playback functionality,
@@ -450,9 +453,7 @@ struct Renderer {
 
     // YUV to sRGB conversion pipeline resources
     yuv_sampler: wgpu::Sampler,
-    yuv_vertex_buffer: wgpu::Buffer,
-    yuv_index_buffer: wgpu::Buffer,
-    yuv_pipeline: wgpu::RenderPipeline,
+    yuv_pipeline: wgpu::ComputePipeline,
 
     // sRGB to Screen rendering pipeline resources
     rgb_sampler: wgpu::Sampler,
@@ -536,7 +537,7 @@ impl Renderer {
                     },
                     count: None,
                     binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    visibility: wgpu::ShaderStages::COMPUTE,
                 },
                 // UV plane texture (chrominance)
                 wgpu::BindGroupLayoutEntry {
@@ -547,14 +548,25 @@ impl Renderer {
                     },
                     count: None,
                     binding: 1,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    visibility: wgpu::ShaderStages::COMPUTE,
                 },
-                // Texture sampler for YUV planes
+                // Texture sampler for UV plane
                 wgpu::BindGroupLayoutEntry {
                     ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
                     count: None,
                     binding: 2,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                },
+                // Output texture
+                wgpu::BindGroupLayoutEntry {
+                    ty: wgpu::BindingType::StorageTexture {
+                        access: wgpu::StorageTextureAccess::WriteOnly,
+                        format: wgpu::TextureFormat::Rgba32Float,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                    },
+                    count: None,
+                    binding: 3,
+                    visibility: wgpu::ShaderStages::COMPUTE,
                 },
             ],
         });
@@ -580,43 +592,14 @@ impl Renderer {
 
         let yuv_shader_module = device.create_shader_module(wgpu::include_wgsl!("yuv_to_srgb.wgsl"));
 
-        // Create YUV to sRGB render pipeline
-        let yuv_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("YUV to sRGB pipeline"),
+        // Create YUV to sRGB compute pipeline
+        let yuv_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("YUV to sRGB compute pipeline"),
             layout: Some(&yuv_pipeline_layout),
+            module: &yuv_shader_module,
+            entry_point: None,
+            compilation_options: Default::default(),
             cache: None,
-            vertex: wgpu::VertexState {
-                module: &yuv_shader_module,
-                buffers: &[Vertex::LAYOUT],
-                compilation_options: Default::default(),
-                entry_point: None,
-            },
-            fragment: Some(wgpu::FragmentState {
-                module: &yuv_shader_module,
-                targets: &[Some(wgpu::ColorTargetState {
-                    format: wgpu::TextureFormat::Rgba32Float, // High precision for Anime4K input
-                    blend: Some(wgpu::BlendState::REPLACE),
-                    write_mask: wgpu::ColorWrites::ALL,
-                })],
-                compilation_options: Default::default(),
-                entry_point: None,
-            }),
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList,
-                strip_index_format: None,
-                cull_mode: Some(wgpu::Face::Back),
-                front_face: wgpu::FrontFace::Ccw,
-                polygon_mode: wgpu::PolygonMode::Fill,
-                conservative: false,
-                unclipped_depth: false,
-            },
-            multisample: wgpu::MultisampleState {
-                count: 1,
-                mask: !0,
-                alpha_to_coverage_enabled: false,
-            },
-            multiview: None,
-            depth_stencil: None,
         });
 
         // Set up RGB to Screen rendering pipeline
@@ -729,8 +712,6 @@ impl Renderer {
             queue,
             surface_configuration,
             yuv_sampler,
-            yuv_vertex_buffer: vertex_buffer.clone(),
-            yuv_index_buffer: index_buffer.clone(),
             yuv_pipeline,
             rgb_sampler,
             rgb_vertex_buffer: vertex_buffer,
@@ -784,7 +765,7 @@ impl Renderer {
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::Rgba32Float, // High precision for Anime4K processing
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            usage: wgpu::TextureUsages::STORAGE_BINDING | wgpu::TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         }));
     }
@@ -901,7 +882,7 @@ impl Renderer {
         if let Some(rgb_texture) = &self.rgb_texture {
             let rgb_texture_view = rgb_texture.create_view(&Default::default());
 
-            // Create bind group for YUV input textures and sampler
+            // Create bind group for YUV input textures, sampler, and output texture
             let yuv_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("YUV bind group"),
                 layout: &self.yuv_pipeline.get_bind_group_layout(0),
@@ -910,7 +891,7 @@ impl Renderer {
                     wgpu::BindGroupEntry {
                         binding: 0,
                         resource: wgpu::BindingResource::TextureView(&frame.create_view(&wgpu::TextureViewDescriptor {
-                            label: Some("y texture"),
+                            label: Some("Y texture"),
                             format: Some(wgpu::TextureFormat::R8Unorm),
                             aspect: wgpu::TextureAspect::Plane0,
                             dimension: Some(wgpu::TextureViewDimension::D2),
@@ -921,41 +902,36 @@ impl Renderer {
                     wgpu::BindGroupEntry {
                         binding: 1,
                         resource: wgpu::BindingResource::TextureView(&frame.create_view(&wgpu::TextureViewDescriptor {
-                            label: Some("uv texture"),
+                            label: Some("UV texture"),
                             format: Some(wgpu::TextureFormat::Rg8Unorm),
                             aspect: wgpu::TextureAspect::Plane1,
                             dimension: Some(wgpu::TextureViewDimension::D2),
                             ..Default::default()
                         })),
                     },
-                    // Linear sampler for YUV texture sampling
+                    // Linear sampler for UV texture sampling
                     wgpu::BindGroupEntry {
                         binding: 2,
                         resource: wgpu::BindingResource::Sampler(&self.yuv_sampler),
                     },
+                    // Output RGB texture
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: wgpu::BindingResource::TextureView(&rgb_texture_view),
+                    },
                 ],
             });
 
-            // Execute YUV to sRGB conversion render pass
+            // Execute YUV to sRGB conversion compute pass
             {
-                let mut yuv_pass = command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                    label: Some("YUV to sRGB pass"),
-                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                        view: &rgb_texture_view,
-                        resolve_target: None,
-                        ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                            store: wgpu::StoreOp::Store,
-                        },
-                    })],
-                    ..Default::default()
+                let mut yuv_pass = command_encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                    label: Some("YUV to sRGB compute pass"),
+                    timestamp_writes: None,
                 });
 
                 yuv_pass.set_pipeline(&self.yuv_pipeline);
                 yuv_pass.set_bind_group(0, &yuv_bind_group, &[]);
-                yuv_pass.set_vertex_buffer(0, self.yuv_vertex_buffer.slice(..));
-                yuv_pass.set_index_buffer(self.yuv_index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-                yuv_pass.draw_indexed(0..INDICES.len() as u32, 0, 0..1);
+                yuv_pass.dispatch_workgroups(video_width.div_ceil(YUV_COMPUTE_WORKGROUP_X), video_height.div_ceil(YUV_COMPUTE_WORKGROUP_Y), 1);
             }
 
             // Stage 2: Apply Anime4K processing if enabled
