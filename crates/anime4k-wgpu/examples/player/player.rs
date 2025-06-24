@@ -28,8 +28,10 @@ use winit::{
 /// between latency and smooth playback.
 const FRAME_BUFFER_LENGTH: usize = 3;
 
-const YUV_COMPUTE_WORKGROUP_X: u32 = 8;
-const YUV_COMPUTE_WORKGROUP_Y: u32 = 8;
+/// Workgroup size for the YUV to sRGB compute shader (X dimension)
+const YUV_COMPUTE_WORKGROUP_SIZE_X: u32 = 8;
+/// Workgroup size for the YUV to sRGB compute shader (Y dimension)
+const YUV_COMPUTE_WORKGROUP_SIZE_Y: u32 = 8;
 
 /// Core video player context managing playback state and rendering pipeline
 ///
@@ -931,7 +933,7 @@ impl Renderer {
 
                 yuv_pass.set_pipeline(&self.yuv_pipeline);
                 yuv_pass.set_bind_group(0, &yuv_bind_group, &[]);
-                yuv_pass.dispatch_workgroups(video_width.div_ceil(YUV_COMPUTE_WORKGROUP_X), video_height.div_ceil(YUV_COMPUTE_WORKGROUP_Y), 1);
+                yuv_pass.dispatch_workgroups(video_width.div_ceil(YUV_COMPUTE_WORKGROUP_SIZE_X), video_height.div_ceil(YUV_COMPUTE_WORKGROUP_SIZE_Y), 1);
             }
 
             // Stage 2: Apply Anime4K processing if enabled

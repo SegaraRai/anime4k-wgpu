@@ -5,7 +5,6 @@
 //! "1/2", "2", etc. and validates pipeline structure.
 
 use serde::{Deserialize, Deserializer};
-use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
 
