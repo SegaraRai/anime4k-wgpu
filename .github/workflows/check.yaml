@@ -57,8 +57,14 @@ jobs:
 
       - name: Check
         run: |
-          cargo check --target ${{ matrix.target }} --verbose
+          cargo check --target ${{ matrix.target }} --release --verbose
 
       - name: Clippy
         run: |
-          cargo clippy --target ${{ matrix.target }} --verbose
+          cargo clippy --target ${{ matrix.target }} --release --verbose
+
+      - name: Test
+        run: |
+          cargo test --target ${{ matrix.target }} --release --verbose
+
+      # We skip conformance tests on GitHub Actions since it requires GPU access.
