@@ -11,8 +11,8 @@ use std::collections::HashMap;
 pub struct TextureLifetime {
     /// Logical identifier for this texture
     pub logical_id: String,
-    /// Number of color channels (1, 2, 3, or 4)
-    pub channels: u32,
+    /// Number of color components (1, 2, 3, or 4)
+    pub components: u32,
     /// Scale factors relative to input dimensions
     pub scale_factor: (ScaleFactor, ScaleFactor),
     /// Pass index where this texture is first created
@@ -25,7 +25,7 @@ pub struct TextureLifetime {
 #[derive(Debug, Clone)]
 pub struct PhysicalTexture {
     pub id: u32,
-    pub channels: u32,
+    pub components: u32,
     pub scale_factor: (ScaleFactor, ScaleFactor),
     pub is_source: bool,
 }
@@ -49,7 +49,7 @@ pub fn assign_physical_textures(texture_lifetimes: &[TextureLifetime]) -> (Vec<P
     let source_id = u32::MAX;
     physical_textures.push(PhysicalTexture {
         id: source_id,
-        channels: 4, // Assume RGBA for source
+        components: 4, // Assume RGBA for source
         scale_factor: (ScaleFactor::new(1, 1), ScaleFactor::new(1, 1)),
         is_source: true,
     });
@@ -64,9 +64,9 @@ pub fn assign_physical_textures(texture_lifetimes: &[TextureLifetime]) -> (Vec<P
             if let Some(existing) = slot {
                 // Check if we can reuse this texture:
                 // 1. Previous texture's lifetime has ended
-                // 2. Same number of channels
+                // 2. Same number of components
                 // 3. Same scale factor
-                if existing.last_used_at < lifetime.created_at && existing.channels == lifetime.channels && existing.scale_factor == lifetime.scale_factor {
+                if existing.last_used_at < lifetime.created_at && existing.components == lifetime.components && existing.scale_factor == lifetime.scale_factor {
                     // Reuse this physical texture
                     assigned_physical_id = Some(physical_id as u32);
                     *slot = Some(lifetime.clone());
@@ -94,7 +94,7 @@ pub fn assign_physical_textures(texture_lifetimes: &[TextureLifetime]) -> (Vec<P
         if !is_reused {
             physical_textures.push(PhysicalTexture {
                 id: physical_id,
-                channels: lifetime.channels,
+                components: lifetime.components,
                 scale_factor: lifetime.scale_factor,
                 is_source: false,
             });
@@ -144,7 +144,7 @@ mod tests {
 
         let source_texture = &physical_textures[0];
         assert_eq!(source_texture.id, u32::MAX);
-        assert_eq!(source_texture.channels, 4);
+        assert_eq!(source_texture.components, 4);
         assert_eq!(source_texture.scale_factor, (ScaleFactor::new(1, 1), ScaleFactor::new(1, 1)));
         assert!(source_texture.is_source);
 
@@ -155,7 +155,7 @@ mod tests {
     fn test_single_texture_lifetime() {
         let lifetime = TextureLifetime {
             logical_id: "TEMP1".to_string(),
-            channels: 4,
+            components: 4,
             scale_factor: (ScaleFactor::new(2, 1), ScaleFactor::new(2, 1)),
             created_at: 0,
             last_used_at: 5,
@@ -178,7 +178,7 @@ mod tests {
         // Check the allocated texture
         let allocated_texture = physical_textures.iter().find(|t| !t.is_source).unwrap();
         assert_eq!(allocated_texture.id, 0);
-        assert_eq!(allocated_texture.channels, 4);
+        assert_eq!(allocated_texture.components, 4);
         assert_eq!(allocated_texture.scale_factor, (ScaleFactor::new(2, 1), ScaleFactor::new(2, 1)));
         assert!(!allocated_texture.is_source);
 
@@ -190,7 +190,7 @@ mod tests {
     fn test_texture_reuse_compatible() {
         let lifetime1 = TextureLifetime {
             logical_id: "TEMP1".to_string(),
-            channels: 4,
+            components: 4,
             scale_factor: (ScaleFactor::new(2, 1), ScaleFactor::new(2, 1)),
             created_at: 0,
             last_used_at: 3,
@@ -198,7 +198,7 @@ mod tests {
 
         let lifetime2 = TextureLifetime {
             logical_id: "TEMP2".to_string(),
-            channels: 4,
+            components: 4,
             scale_factor: (ScaleFactor::new(2, 1), ScaleFactor::new(2, 1)),
             created_at: 4, // Starts after lifetime1 ends
             last_used_at: 7,
@@ -226,16 +226,16 @@ mod tests {
 
         let reused_texture = non_source_textures[0];
         assert_eq!(reused_texture.id, 0);
-        assert_eq!(reused_texture.channels, 4);
+        assert_eq!(reused_texture.components, 4);
         assert_eq!(reused_texture.scale_factor, (ScaleFactor::new(2, 1), ScaleFactor::new(2, 1)));
         assert!(!reused_texture.is_source);
     }
 
     #[test]
-    fn test_texture_reuse_incompatible_channels() {
+    fn test_texture_reuse_incompatible_components() {
         let lifetime1 = TextureLifetime {
             logical_id: "TEMP1".to_string(),
-            channels: 4,
+            components: 4,
             scale_factor: (ScaleFactor::new(2, 1), ScaleFactor::new(2, 1)),
             created_at: 0,
             last_used_at: 3,
@@ -243,7 +243,7 @@ mod tests {
 
         let lifetime2 = TextureLifetime {
             logical_id: "TEMP2".to_string(),
-            channels: 1, // Different channel count
+            components: 1, // Different component count
             scale_factor: (ScaleFactor::new(2, 1), ScaleFactor::new(2, 1)),
             created_at: 4,
             last_used_at: 7,
@@ -254,28 +254,28 @@ mod tests {
         // Conformance check: no duplicate physical texture IDs
         assert_no_duplicate_physical_texture_ids(&physical_textures);
 
-        // Should have SOURCE + two separate physical textures (different channels)
+        // Should have SOURCE + two separate physical textures (different components)
         assert_eq!(physical_textures.len(), 3);
 
         let temp1_id = assignments.get("TEMP1").unwrap();
         let temp2_id = assignments.get("TEMP2").unwrap();
 
-        // Should be different physical textures due to incompatible channels
+        // Should be different physical textures due to incompatible components
         assert_ne!(temp1_id, temp2_id);
 
-        // Verify the channel counts are correct
+        // Verify the component counts are correct
         let temp1_texture = physical_textures.iter().find(|t| t.id == *temp1_id).unwrap();
         let temp2_texture = physical_textures.iter().find(|t| t.id == *temp2_id).unwrap();
 
-        assert_eq!(temp1_texture.channels, 4);
-        assert_eq!(temp2_texture.channels, 1);
+        assert_eq!(temp1_texture.components, 4);
+        assert_eq!(temp2_texture.components, 1);
     }
 
     #[test]
     fn test_texture_reuse_incompatible_scale_factor() {
         let lifetime1 = TextureLifetime {
             logical_id: "TEMP1".to_string(),
-            channels: 4,
+            components: 4,
             scale_factor: (ScaleFactor::new(2, 1), ScaleFactor::new(2, 1)),
             created_at: 0,
             last_used_at: 3,
@@ -283,7 +283,7 @@ mod tests {
 
         let lifetime2 = TextureLifetime {
             logical_id: "TEMP2".to_string(),
-            channels: 4,
+            components: 4,
             scale_factor: (ScaleFactor::new(1, 1), ScaleFactor::new(1, 1)), // Different scale factor
             created_at: 4,
             last_used_at: 7,
@@ -315,7 +315,7 @@ mod tests {
     fn test_overlapping_lifetimes() {
         let lifetime1 = TextureLifetime {
             logical_id: "TEMP1".to_string(),
-            channels: 4,
+            components: 4,
             scale_factor: (ScaleFactor::new(2, 1), ScaleFactor::new(2, 1)),
             created_at: 0,
             last_used_at: 5,
@@ -323,7 +323,7 @@ mod tests {
 
         let lifetime2 = TextureLifetime {
             logical_id: "TEMP2".to_string(),
-            channels: 4,
+            components: 4,
             scale_factor: (ScaleFactor::new(2, 1), ScaleFactor::new(2, 1)),
             created_at: 3, // Overlaps with lifetime1
             last_used_at: 7,
@@ -348,7 +348,7 @@ mod tests {
     fn test_multiple_texture_chain() {
         let lifetime1 = TextureLifetime {
             logical_id: "TEMP1".to_string(),
-            channels: 4,
+            components: 4,
             scale_factor: (ScaleFactor::new(2, 1), ScaleFactor::new(2, 1)),
             created_at: 0,
             last_used_at: 2,
@@ -356,7 +356,7 @@ mod tests {
 
         let lifetime2 = TextureLifetime {
             logical_id: "TEMP2".to_string(),
-            channels: 4,
+            components: 4,
             scale_factor: (ScaleFactor::new(2, 1), ScaleFactor::new(2, 1)),
             created_at: 3,
             last_used_at: 5,
@@ -364,7 +364,7 @@ mod tests {
 
         let lifetime3 = TextureLifetime {
             logical_id: "TEMP3".to_string(),
-            channels: 4,
+            components: 4,
             scale_factor: (ScaleFactor::new(2, 1), ScaleFactor::new(2, 1)),
             created_at: 6,
             last_used_at: 8,
@@ -400,7 +400,7 @@ mod tests {
 
         let reused_texture = non_source_textures[0];
         assert_eq!(reused_texture.id, 0);
-        assert_eq!(reused_texture.channels, 4);
+        assert_eq!(reused_texture.components, 4);
         assert_eq!(reused_texture.scale_factor, (ScaleFactor::new(2, 1), ScaleFactor::new(2, 1)));
         assert!(!reused_texture.is_source);
     }
@@ -409,7 +409,7 @@ mod tests {
     fn test_source_texture_properties() {
         let lifetime = TextureLifetime {
             logical_id: "TEMP1".to_string(),
-            channels: 1,
+            components: 1,
             scale_factor: (ScaleFactor::new(1, 2), ScaleFactor::new(1, 2)),
             created_at: 0,
             last_used_at: 5,
@@ -425,7 +425,7 @@ mod tests {
 
         // SOURCE should always have these properties regardless of other textures
         assert_eq!(source_texture.id, u32::MAX);
-        assert_eq!(source_texture.channels, 4); // Always RGBA for source
+        assert_eq!(source_texture.components, 4); // Always RGBA for source
         assert_eq!(source_texture.scale_factor, (ScaleFactor::new(1, 1), ScaleFactor::new(1, 1))); // Always 1x1 scale
         assert!(source_texture.is_source);
 
@@ -437,21 +437,21 @@ mod tests {
         let lifetimes = &[
             TextureLifetime {
                 logical_id: "TEMP1".to_string(),
-                channels: 4,
+                components: 4,
                 scale_factor: (ScaleFactor::new(2, 1), ScaleFactor::new(2, 1)),
                 created_at: 0,
                 last_used_at: 1,
             },
             TextureLifetime {
                 logical_id: "TEMP2".to_string(),
-                channels: 1,
+                components: 1,
                 scale_factor: (ScaleFactor::new(1, 1), ScaleFactor::new(1, 1)),
                 created_at: 0,
                 last_used_at: 1,
             },
             TextureLifetime {
                 logical_id: "TEMP3".to_string(),
-                channels: 2,
+                components: 2,
                 scale_factor: (ScaleFactor::new(4, 1), ScaleFactor::new(4, 1)),
                 created_at: 0,
                 last_used_at: 1,
@@ -484,7 +484,7 @@ mod tests {
     fn test_edge_case_same_creation_and_usage_time() {
         let lifetime1 = TextureLifetime {
             logical_id: "TEMP1".to_string(),
-            channels: 4,
+            components: 4,
             scale_factor: (ScaleFactor::new(2, 1), ScaleFactor::new(2, 1)),
             created_at: 5,
             last_used_at: 5, // Same time
@@ -492,7 +492,7 @@ mod tests {
 
         let lifetime2 = TextureLifetime {
             logical_id: "TEMP2".to_string(),
-            channels: 4,
+            components: 4,
             scale_factor: (ScaleFactor::new(2, 1), ScaleFactor::new(2, 1)),
             created_at: 5, // Same creation time
             last_used_at: 5,
@@ -524,14 +524,14 @@ mod tests {
             // Group A: Compatible textures that can be reused sequentially
             TextureLifetime {
                 logical_id: "TEMP1".to_string(),
-                channels: 4,
+                components: 4,
                 scale_factor: (ScaleFactor::new(2, 1), ScaleFactor::new(2, 1)),
                 created_at: 0,
                 last_used_at: 2,
             },
             TextureLifetime {
                 logical_id: "TEMP2".to_string(),
-                channels: 4,
+                components: 4,
                 scale_factor: (ScaleFactor::new(2, 1), ScaleFactor::new(2, 1)),
                 created_at: 3, // Can reuse TEMP1's physical texture
                 last_used_at: 5,
@@ -539,7 +539,7 @@ mod tests {
             // Group B: Overlapping with Group A (needs separate physical texture)
             TextureLifetime {
                 logical_id: "TEMP3".to_string(),
-                channels: 4,
+                components: 4,
                 scale_factor: (ScaleFactor::new(2, 1), ScaleFactor::new(2, 1)),
                 created_at: 1,   // Overlaps with TEMP1
                 last_used_at: 4, // Also overlaps with TEMP2
@@ -547,7 +547,7 @@ mod tests {
             // Group C: Different properties (needs separate physical texture)
             TextureLifetime {
                 logical_id: "TEMP4".to_string(),
-                channels: 1, // Different channel count
+                components: 1, // Different component count
                 scale_factor: (ScaleFactor::new(2, 1), ScaleFactor::new(2, 1)),
                 created_at: 6,
                 last_used_at: 8,
@@ -555,7 +555,7 @@ mod tests {
             // Group D: Can reuse Group A's texture after all others are done
             TextureLifetime {
                 logical_id: "TEMP5".to_string(),
-                channels: 4,
+                components: 4,
                 scale_factor: (ScaleFactor::new(2, 1), ScaleFactor::new(2, 1)),
                 created_at: 9, // After all previous compatible textures
                 last_used_at: 11,
@@ -598,21 +598,21 @@ mod tests {
         for texture in &physical_textures {
             if texture.is_source {
                 assert_eq!(texture.id, u32::MAX);
-                assert_eq!(texture.channels, 4);
+                assert_eq!(texture.components, 4);
                 assert_eq!(texture.scale_factor, (ScaleFactor::new(1, 1), ScaleFactor::new(1, 1)));
             } else {
                 // All non-source textures should have the expected scale factor
                 assert_eq!(texture.scale_factor, (ScaleFactor::new(2, 1), ScaleFactor::new(2, 1)));
                 assert!(!texture.is_source);
 
-                // Channels should be either 4 (for most textures) or 1 (for TEMP4)
-                assert!(texture.channels == 4 || texture.channels == 1);
+                // components should be either 4 (for most textures) or 1 (for TEMP4)
+                assert!(texture.components == 4 || texture.components == 1);
             }
         }
 
-        // Verify exactly one texture has 1 channel (TEMP4's physical texture)
-        let single_channel_textures: Vec<_> = physical_textures.iter().filter(|t| !t.is_source && t.channels == 1).collect();
-        assert_eq!(single_channel_textures.len(), 1);
-        assert_eq!(single_channel_textures[0].id, temp4_id);
+        // Verify exactly one texture has 1 component (TEMP4's physical texture)
+        let single_component_textures: Vec<_> = physical_textures.iter().filter(|t| !t.is_source && t.components == 1).collect();
+        assert_eq!(single_component_textures.len(), 1);
+        assert_eq!(single_component_textures[0].id, temp4_id);
     }
 }

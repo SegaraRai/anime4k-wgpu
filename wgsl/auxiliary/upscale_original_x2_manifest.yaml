@@ -10,7 +10,7 @@ passes:
     outputs:
       - id: luma
         binding: 1
-        channels: 1
+        components: 1
         scale_factor: ["1", "1"]
   - id: x_gradient
     file: upscale_original_x2_pass2_kernel_x.wgsl
@@ -22,7 +22,7 @@ passes:
     outputs:
       - id: lumad_x
         binding: 3
-        channels: 2
+        components: 2
         scale_factor: ["2", "2"]
     samplers:
       - binding: 2
@@ -34,7 +34,7 @@ passes:
     outputs:
       - id: lumad_y
         binding: 1
-        channels: 2
+        components: 2
         scale_factor: ["2", "2"]
   - id: x_gradient_2
     file: upscale_original_x2_pass4_kernel_x2.wgsl
@@ -44,7 +44,7 @@ passes:
     outputs:
       - id: lumamm_x
         binding: 1
-        channels: 2
+        components: 2
         scale_factor: ["2", "2"]
   - id: y_gradient_2
     file: upscale_original_x2_pass5_kernel_y2.wgsl
@@ -56,7 +56,7 @@ passes:
     outputs:
       - id: lumamm_y
         binding: 2
-        channels: 2
+        components: 2
         scale_factor: ["2", "2"]
   - id: upscale_apply
     file: upscale_original_x2_pass6_apply.wgsl
@@ -70,7 +70,7 @@ passes:
     outputs:
       - id: RESULT
         binding: 4
-        channels: 4
+        components: 4
         scale_factor: ["2", "2"]
     samplers:
       - binding: 1

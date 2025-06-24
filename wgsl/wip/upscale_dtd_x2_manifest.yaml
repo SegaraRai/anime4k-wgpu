@@ -11,7 +11,7 @@ passes:
     outputs:
       - id: lineluma
         binding: 1
-        channels: 1
+        components: 1
         scale_factor: ["1", "1"]
 
   # Pass 2: Gaussian blur X with SIGMA=1.0
@@ -25,7 +25,7 @@ passes:
     outputs:
       - id: mmkernel_x1
         binding: 2
-        channels: 1
+        components: 1
         scale_factor: ["1", "1"]
 
   # Pass 3: Gaussian blur Y with SIGMA=1.0, compute difference
@@ -41,7 +41,7 @@ passes:
     outputs:
       - id: mmkernel_y1
         binding: 3
-        channels: 1
+        components: 1
         scale_factor: ["1", "1"]
 
   # Pass 4: Gaussian blur X with SIGMA=0.4
@@ -55,7 +55,7 @@ passes:
     outputs:
       - id: mmkernel_x04
         binding: 2
-        channels: 1
+        components: 1
         scale_factor: ["1", "1"]
 
   # Pass 5: Gaussian blur Y with SIGMA=0.4
@@ -69,7 +69,7 @@ passes:
     outputs:
       - id: mmkernel_y04
         binding: 2
-        channels: 1
+        components: 1
         scale_factor: ["1", "1"]
 
   # Pass 6: Apply line darkening
@@ -83,7 +83,7 @@ passes:
     outputs:
       - id: darkened
         binding: 2
-        channels: 4
+        components: 4
         scale_factor: ["1", "1"]
 
   # Pass 7: Extract luminance for thin line processing
@@ -95,7 +95,7 @@ passes:
     outputs:
       - id: lineluma2
         binding: 1
-        channels: 1
+        components: 1
         scale_factor: ["1", "1"]
 
   # Pass 8: Compute gradients X
@@ -109,7 +109,7 @@ passes:
     outputs:
       - id: lumad_x
         binding: 2
-        channels: 2
+        components: 2
         scale_factor: ["1", "1"]
 
   # Pass 9: Compute gradients Y and magnitude
@@ -123,7 +123,7 @@ passes:
     outputs:
       - id: lumad_y
         binding: 2
-        channels: 1
+        components: 1
         scale_factor: ["1", "1"]
 
   # Pass 10: Gaussian blur on gradients X
@@ -137,7 +137,7 @@ passes:
     outputs:
       - id: lumadg_x
         binding: 2
-        channels: 1
+        components: 1
         scale_factor: ["1", "1"]
 
   # Pass 11: Gaussian blur on gradients Y
@@ -153,7 +153,7 @@ passes:
     outputs:
       - id: lumad_final
         binding: 3
-        channels: 1
+        components: 1
         scale_factor: ["1", "1"]
 
   # Pass 12: Compute second gradients X
@@ -167,7 +167,7 @@ passes:
     outputs:
       - id: lumad2_x
         binding: 2
-        channels: 2
+        components: 2
         scale_factor: ["1", "1"]
 
   # Pass 13: Compute second gradients Y
@@ -181,7 +181,7 @@ passes:
     outputs:
       - id: lumad2_y
         binding: 2
-        channels: 2
+        components: 2
         scale_factor: ["1", "1"]
 
   # Pass 14: Upscale and warp
@@ -195,7 +195,7 @@ passes:
     outputs:
       - id: maintempthin
         binding: 4
-        channels: 4
+        components: 4
         scale_factor: ["2", "2"]
     samplers:
       - binding: 1
@@ -212,7 +212,7 @@ passes:
     outputs:
       - id: maintemp
         binding: 2
-        channels: 1
+        components: 1
         scale_factor: ["2", "2"]
 
   # Pass 16: Min/max kernel X
@@ -226,7 +226,7 @@ passes:
     outputs:
       - id: mmkernel_x
         binding: 2
-        channels: 3
+        components: 3
         scale_factor: ["2", "2"]
 
   # Pass 17: Min/max kernel Y
@@ -240,7 +240,7 @@ passes:
     outputs:
       - id: mmkernel_y
         binding: 2
-        channels: 3
+        components: 3
         scale_factor: ["2", "2"]
 
   # Pass 18: Final upscale apply
@@ -258,5 +258,5 @@ passes:
     outputs:
       - id: RESULT
         binding: 4
-        channels: 4
+        components: 4
         scale_factor: ["2", "2"]

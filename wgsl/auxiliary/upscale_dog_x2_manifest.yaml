@@ -10,7 +10,7 @@ passes:
     outputs:
       - id: luma
         binding: 1
-        channels: 1
+        components: 1
         scale_factor: ["1", "1"]
   - id: x_gaussian_minmax
     file: upscale_dog_x2_pass2_kernel_x.wgsl
@@ -22,7 +22,7 @@ passes:
     outputs:
       - id: gauss_x
         binding: 2
-        channels: 3
+        components: 3
         scale_factor: ["1", "1"]
   - id: y_gaussian_minmax
     file: upscale_dog_x2_pass3_kernel_y.wgsl
@@ -32,7 +32,7 @@ passes:
     outputs:
       - id: gauss_y
         binding: 1
-        channels: 3
+        components: 3
         scale_factor: ["1", "1"]
   - id: upscale_apply
     file: upscale_dog_x2_pass4_apply.wgsl
@@ -46,7 +46,7 @@ passes:
     outputs:
       - id: RESULT
         binding: 4
-        channels: 4
+        components: 4
         scale_factor: ["2", "2"]
     samplers:
       - binding: 3

@@ -45,7 +45,7 @@ fn dump_executable_pipeline(name: &str, pipeline: &ExecutablePipeline) -> String
     for texture in &pipeline.physical_textures {
         output.push_str("        PhysicalTexture {\n");
         output.push_str(&format!("            id: {},\n", texture.id));
-        output.push_str(&format!("            components: {},\n", texture.channels));
+        output.push_str(&format!("            components: {},\n", texture.components));
         output.push_str("            scale_factor: (\n");
         output.push_str(&format!(
             "                ScaleFactor {{ numerator: {}, denominator: {} }},\n",

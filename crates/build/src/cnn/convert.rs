@@ -28,7 +28,7 @@ enum ConvolutionStageType {
     Conv,
     /// Depth to space layer for upscaling
     ///
-    /// These stages rearrange channels to increase spatial resolution,
+    /// These stages rearrange components to increase spatial resolution,
     /// typically used as the final upscaling step in the pipeline.
     DepthToSpace,
 }
@@ -256,8 +256,8 @@ pub enum WgslStageShaderType {
     },
     /// Depth-to-space upscaling layer with fixed algorithm
     DepthToSpace {
-        /// Number of input channels to process
-        channel_count: u32,
+        /// Number of input components to process
+        components: u32,
     },
 }
 
@@ -308,8 +308,8 @@ impl WgslStageShader {
                 code: Self::convert_conv_hook_code(&source, scale_factor_map)?,
             },
             ConvolutionStageType::DepthToSpace => {
-                let channel_count = source.inputs.len() as u32;
-                WgslStageShaderType::DepthToSpace { channel_count }
+                let components = source.inputs.len() as u32;
+                WgslStageShaderType::DepthToSpace { components }
             }
         };
         let inputs: Vec<_> = source

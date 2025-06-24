@@ -6,8 +6,8 @@
 
 fn process(pos: vec2i) {
     let overlay_pos = vec2i(pos.x / 2, pos.y / 2);
-    let overlay_channel = (pos.y % 2) * 2 + (pos.x % 2);
-    let overlay_scalar = textureLoad(overlay_texture, overlay_pos, 0)[overlay_channel];
+    let overlay_component = (pos.y % 2) * 2 + (pos.x % 2);
+    let overlay_scalar = textureLoad(overlay_texture, overlay_pos, 0)[overlay_component];
     let overlay_color = vec4f(overlay_scalar, overlay_scalar, overlay_scalar, 0.0);
     let source_color = textureSampleLevel(source_texture, source_sampler, (vec2f(pos) + vec2f(0.5)) / vec2f(textureDimensions(output_texture)), 0.0);
     textureStore(output_texture, pos, source_color + overlay_color);

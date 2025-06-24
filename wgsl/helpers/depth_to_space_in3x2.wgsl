@@ -8,11 +8,11 @@
 
 fn process(pos: vec2i) {
     let overlay_pos = vec2i(pos.x / 2, pos.y / 2);
-    let overlay_channel = (pos.y % 2) * 2 + (pos.x % 2);
+    let overlay_component = (pos.y % 2) * 2 + (pos.x % 2);
     let overlay_color = vec4f(
-        textureLoad(overlay_r_texture, overlay_pos, 0)[overlay_channel],
-        textureLoad(overlay_g_texture, overlay_pos, 0)[overlay_channel],
-        textureLoad(overlay_b_texture, overlay_pos, 0)[overlay_channel],
+        textureLoad(overlay_r_texture, overlay_pos, 0)[overlay_component],
+        textureLoad(overlay_g_texture, overlay_pos, 0)[overlay_component],
+        textureLoad(overlay_b_texture, overlay_pos, 0)[overlay_component],
         0.0
     );
     let source_color = textureSampleLevel(source_texture, source_sampler, (vec2f(pos) + vec2f(0.5)) / vec2f(textureDimensions(output_texture)), 0.0);

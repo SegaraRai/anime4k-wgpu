@@ -279,22 +279,22 @@ impl PipelineProcessor {
                 self.physical_textures.insert(physical_texture.id, input_texture.clone());
                 if self.log {
                     println!(
-                        "Assigned SOURCE texture (ID {}): {}x{} channels={}",
-                        physical_texture.id, self.input_width, self.input_height, physical_texture.channels
+                        "Assigned SOURCE texture (ID {}): {}x{} components={}",
+                        physical_texture.id, self.input_width, self.input_height, physical_texture.components
                     );
                 }
             } else {
                 // Intermediate/output texture: calculate dimensions and create new texture
                 let (width, height) = self.calculate_physical_texture_dimensions(physical_texture);
-                let format = self.get_texture_format_for_channels(physical_texture.channels);
+                let format = self.get_texture_format_for_components(physical_texture.components);
 
                 // Create texture with storage usage for shader writes
                 let texture = create_texture(&self.engine.device, width, height, format, TEXTURE_USAGE_STORAGE);
                 self.physical_textures.insert(physical_texture.id, texture);
                 if self.log {
                     println!(
-                        "Allocated physical texture (ID {}): {}x{} {:?} channels={}",
-                        physical_texture.id, width, height, format, physical_texture.channels
+                        "Allocated physical texture (ID {}): {}x{} {:?} components={}",
+                        physical_texture.id, width, height, format, physical_texture.components
                     );
                 }
             }
@@ -367,7 +367,7 @@ impl PipelineProcessor {
                     visibility: wgpu::ShaderStages::COMPUTE,
                     ty: wgpu::BindingType::StorageTexture {
                         access: wgpu::StorageTextureAccess::WriteOnly,
-                        format: self.get_texture_format_for_channels(output.channels),
+                        format: self.get_texture_format_for_components(output.components),
                         view_dimension: wgpu::TextureViewDimension::D2,
                     },
                     count: None,

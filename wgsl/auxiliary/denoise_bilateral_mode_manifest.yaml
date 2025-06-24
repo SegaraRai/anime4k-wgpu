@@ -10,7 +10,7 @@ passes:
     outputs:
       - id: luma
         binding: 1
-        channels: 1
+        components: 1
         scale_factor: ["1", "1"]
   - id: bilateral_mode_filter
     file: denoise_bilateral_mode_pass2_apply.wgsl
@@ -22,5 +22,5 @@ passes:
     outputs:
       - id: RESULT
         binding: 2
-        channels: 4
+        components: 4
         scale_factor: ["1", "1"]

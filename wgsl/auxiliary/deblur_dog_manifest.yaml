@@ -10,7 +10,7 @@ passes:
     outputs:
       - id: luma
         binding: 1
-        channels: 1
+        components: 1
         scale_factor: ["1", "1"]
   - id: x_gaussian_minmax
     file: deblur_dog_pass2_kernel_x.wgsl
@@ -22,7 +22,7 @@ passes:
     outputs:
       - id: mmkernel_x
         binding: 2
-        channels: 3
+        components: 3
         scale_factor: ["1", "1"]
   - id: y_gaussian_minmax
     file: deblur_dog_pass3_kernel_y.wgsl
@@ -34,7 +34,7 @@ passes:
     outputs:
       - id: mmkernel_y
         binding: 2
-        channels: 3
+        components: 3
         scale_factor: ["1", "1"]
   - id: apply_deblur
     file: deblur_dog_pass4_apply.wgsl
@@ -48,5 +48,5 @@ passes:
     outputs:
       - id: RESULT
         binding: 3
-        channels: 4
+        components: 4
         scale_factor: ["1", "1"]

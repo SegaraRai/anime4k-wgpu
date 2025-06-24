@@ -59,8 +59,8 @@ pub struct PhysicalTextureBinding {
     pub physical_id: u32,
     /// Shader binding point
     pub binding: u32,
-    /// Number of color channels
-    pub channels: u32,
+    /// Number of color components
+    pub components: u32,
     /// Scale factor relative to input
     pub scale_factor: (ScaleFactor, ScaleFactor),
 }
@@ -333,7 +333,7 @@ impl PipelineCompiler {
 
                 texture_lifetimes.push(TextureLifetime {
                     logical_id: output.id.clone(),
-                    channels: output.channels,
+                    components: output.components,
                     scale_factor: (output.scale_factor[0], output.scale_factor[1]),
                     created_at: pass_idx,
                     last_used_at,
@@ -366,7 +366,7 @@ impl PipelineCompiler {
                             logical_id: input.id.clone(),
                             physical_id,
                             binding: input.binding,
-                            channels: physical_texture.0,
+                            components: physical_texture.0,
                             scale_factor: physical_texture.1,
                         }
                     })
@@ -382,7 +382,7 @@ impl PipelineCompiler {
                             logical_id: output.id.clone(),
                             physical_id,
                             binding: output.binding,
-                            channels: output.channels,
+                            components: output.components,
                             scale_factor: (output.scale_factor[0], output.scale_factor[1]),
                         }
                     })
@@ -407,7 +407,7 @@ impl PipelineCompiler {
 
     /// Finds physical texture information for a logical texture ID
     ///
-    /// This method looks up the channel count and scale factors for a given
+    /// This method looks up the component count and scale factors for a given
     /// logical texture ID by searching through the pass outputs where it was defined.
     /// Special handling is provided for the SOURCE texture.
     ///
@@ -415,7 +415,7 @@ impl PipelineCompiler {
     /// * `logical_id` - The logical texture identifier to look up
     ///
     /// # Returns
-    /// A tuple containing (channel_count, (width_scale, height_scale))
+    /// A tuple containing (component_count, (width_scale, height_scale))
     fn find_physical_texture_info(&self, logical_id: &str) -> (u32, (ScaleFactor, ScaleFactor)) {
         if logical_id == "SOURCE" {
             return (4, (ScaleFactor::new(1, 1), ScaleFactor::new(1, 1)));
@@ -425,7 +425,7 @@ impl PipelineCompiler {
         for pass in &self.raw.passes {
             for output in &pass.outputs {
                 if output.id == logical_id {
-                    return (output.channels, (output.scale_factor[0], output.scale_factor[1]));
+                    return (output.components, (output.scale_factor[0], output.scale_factor[1]));
                 }
             }
         }
@@ -507,7 +507,7 @@ passes:
     outputs:
       - id: RESULT
         binding: 1
-        channels: 4
+        components: 4
         scale_factor: ["2", "2"]
 "#;
 
@@ -527,7 +527,7 @@ passes:
         assert_eq!(source_texture.id, u32::MAX);
 
         let result_texture = executable.physical_textures.iter().find(|t| !t.is_source).unwrap();
-        assert_eq!(result_texture.channels, 4);
+        assert_eq!(result_texture.components, 4);
         assert_eq!(result_texture.scale_factor, (ScaleFactor::new(2, 1), ScaleFactor::new(2, 1)));
     }
 
@@ -550,7 +550,7 @@ passes:
     outputs:
       - id: RESULT
         binding: 1
-        channels: 4
+        components: 4
         scale_factor: ["2", "2"]
 "#;
 

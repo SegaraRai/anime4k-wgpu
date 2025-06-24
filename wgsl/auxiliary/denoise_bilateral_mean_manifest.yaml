@@ -10,5 +10,5 @@ passes:
     outputs:
       - id: RESULT
         binding: 1
-        channels: 4
+        components: 4
         scale_factor: ["1", "1"]

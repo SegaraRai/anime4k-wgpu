@@ -156,9 +156,9 @@ pub fn save_texture_as_image(device: &wgpu::Device, queue: &wgpu::Queue, texture
 
     // Determine the number of components and bytes per component based on format
     let (components, bytes_per_component) = match format {
-        wgpu::TextureFormat::R32Float => (1, 4),    // Single channel, 4 bytes per float
-        wgpu::TextureFormat::Rg32Float => (2, 4),   // Two channels, 4 bytes per float
-        wgpu::TextureFormat::Rgba32Float => (4, 4), // Four channels, 4 bytes per float
+        wgpu::TextureFormat::R32Float => (1, 4),    // Single component, 4 bytes per float
+        wgpu::TextureFormat::Rg32Float => (2, 4),   // Two components, 4 bytes per float
+        wgpu::TextureFormat::Rgba32Float => (4, 4), // Four components, 4 bytes per float
         _ => return Err(format!("Unsupported texture format for saving: {:?}", format).into()),
     };
 
@@ -215,7 +215,7 @@ pub fn save_texture_as_image(device: &wgpu::Device, queue: &wgpu::Queue, texture
     // Convert the texture data to RGBA32F format based on source format
     let image = match components {
         1 => {
-            // R32Float - expand single channel to grayscale RGBA
+            // R32Float - expand single component to grayscale RGBA
             let mut rgba_data = Vec::with_capacity((width * height * 4) as usize);
             for &r in float_data {
                 // Use absolute value to handle potential negative values
@@ -228,7 +228,7 @@ pub fn save_texture_as_image(device: &wgpu::Device, queue: &wgpu::Queue, texture
             image::Rgba32FImage::from_raw(width, height, rgba_data).ok_or("Failed to create RGBA32F image from data")?
         }
         2 => {
-            // RG32Float - expand two channels to RGBA with R,G channels and blue=0, alpha=1
+            // RG32Float - expand two components to RGBA with R,G components and blue=0, alpha=1
             let mut rgba_data = Vec::with_capacity((width * height * 4) as usize);
             for chunk in float_data.chunks(2) {
                 rgba_data.push(chunk[0].abs()); // R

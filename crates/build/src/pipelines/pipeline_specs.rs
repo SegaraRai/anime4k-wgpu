@@ -158,8 +158,8 @@ pub struct TextureOutput {
     pub id: String,
     /// Shader binding point index
     pub binding: u32,
-    /// Number of color channels (1, 2, 3, or 4)
-    pub channels: u32,
+    /// Number of color components in this texture
+    pub components: u32,
     /// Scale factors [width_scale, height_scale] relative to input
     pub scale_factor: [ScaleFactor; 2],
 }
@@ -195,30 +195,6 @@ pub struct PipelineSpec {
     pub description: Option<String>,
     /// Sequence of shader passes
     pub passes: Vec<Pass>,
-}
-
-/// Legacy texture analysis results (deprecated)
-#[derive(Debug, Clone)]
-pub struct TextureAnalysis {
-    /// Mapping from logical texture IDs to physical texture IDs
-    pub texture_assignments: HashMap<String, u32>,
-    /// Information about each physical texture
-    pub texture_info: HashMap<u32, TextureInfo>,
-    /// Maximum number of textures alive simultaneously
-    pub max_concurrent_textures: u32,
-}
-
-/// Legacy texture information (deprecated)
-#[derive(Debug, Clone)]
-pub struct TextureInfo {
-    /// Number of color channels
-    pub channels: u32,
-    /// Scale factors (width, height)
-    pub scale_factor: (ScaleFactor, ScaleFactor),
-    /// First pass that creates this texture
-    pub lifetime_start: usize,
-    /// Last pass that uses this texture
-    pub lifetime_end: usize,
 }
 
 impl PipelineSpec {
@@ -293,7 +269,7 @@ passes:
     outputs:
       - id: RESULT
         binding: 1
-        channels: 4
+        components: 4
         scale_factor: ["2", "2"]
 "#;
 

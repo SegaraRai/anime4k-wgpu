@@ -17,13 +17,13 @@ pub enum CompareResult {
     },
     /// Images have matching dimensions but different pixel values
     PixelMismatch {
-        /// Whether red channel values match
+        /// Whether red component values match
         r_matched: bool,
-        /// Whether green channel values match
+        /// Whether green component values match
         g_matched: bool,
-        /// Whether blue channel values match
+        /// Whether blue component values match
         b_matched: bool,
-        /// Whether alpha channel values match
+        /// Whether alpha component values match
         a_matched: bool,
     },
 }
@@ -46,27 +46,27 @@ pub fn compare_images(glsl_output: &image::Rgba32FImage, wgsl_output: &image::Rg
         };
     }
 
-    // Track which color channels match across all pixels
-    // Start with assumption that all channels match
+    // Track which color components match across all pixels
+    // Start with assumption that all components match
     let mut matched: [bool; 4] = [true; 4];
 
     // Compare each pixel between the two images
     for (glsl_pixel, wgsl_pixel) in glsl_output.pixels().zip(wgsl_output.pixels()) {
-        // Check each color channel (RGBA)
+        // Check each color component (RGBA)
         for i in 0..4 {
-            // If any pixel differs in this channel, mark channel as mismatched
+            // If any pixel differs in this component, mark component as mismatched
             if glsl_pixel[i] != wgsl_pixel[i] {
                 matched[i] = false;
             }
         }
     }
 
-    // Return appropriate result based on channel matching
+    // Return appropriate result based on component matching
     if matched.iter().all(|&x| x) {
-        // All channels matched perfectly
+        // All components matched perfectly
         CompareResult::Match
     } else {
-        // Some channels had mismatches - report which ones
+        // Some components had mismatches - report which ones
         CompareResult::PixelMismatch {
             r_matched: matched[0],
             g_matched: matched[1],

@@ -333,7 +333,7 @@ fn save_texture_to_image(device: &wgpu::Device, queue: &wgpu::Queue, texture: &w
     // Convert data to RGBA format based on source format
     let image = match components {
         1 => {
-            // R32Float - expand single channel to grayscale RGBA
+            // R32Float - expand single component to grayscale RGBA
             let mut rgba_data = Vec::with_capacity((width * height * 4) as usize);
             for &r in float_data {
                 rgba_data.push(r.abs());
@@ -344,7 +344,7 @@ fn save_texture_to_image(device: &wgpu::Device, queue: &wgpu::Queue, texture: &w
             image::Rgba32FImage::from_raw(width, height, rgba_data).ok_or("Failed to create RGBA32F image from data")?
         }
         2 => {
-            // RG32Float - expand two channels to RGBA with zero blue and full alpha
+            // RG32Float - expand two components to RGBA with zero blue and full alpha
             let mut rgba_data = Vec::with_capacity((width * height * 4) as usize);
             for chunk in float_data.chunks(2) {
                 rgba_data.push(chunk[0].abs());

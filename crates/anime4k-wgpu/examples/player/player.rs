@@ -887,7 +887,7 @@ impl Renderer {
                 label: Some("YUV bind group"),
                 layout: &self.yuv_pipeline.get_bind_group_layout(0),
                 entries: &[
-                    // Y plane (luminance) as single-channel texture
+                    // Y plane (luminance) as single-component texture
                     wgpu::BindGroupEntry {
                         binding: 0,
                         resource: wgpu::BindingResource::TextureView(&frame.create_view(&wgpu::TextureViewDescriptor {
@@ -898,7 +898,7 @@ impl Renderer {
                             ..Default::default()
                         })),
                     },
-                    // UV plane (chrominance) as two-channel texture
+                    // UV plane (chrominance) as two-component texture
                     wgpu::BindGroupEntry {
                         binding: 1,
                         resource: wgpu::BindingResource::TextureView(&frame.create_view(&wgpu::TextureViewDescriptor {

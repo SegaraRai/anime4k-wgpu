@@ -265,9 +265,9 @@ impl MpvHook {
                 "writeonly" => {
                     // Output textures use image storage for direct pixel writes
                     let format_string = match format {
-                        wgpu::TextureFormat::R32Float => "r32f",       // Single channel 32-bit float
-                        wgpu::TextureFormat::Rg32Float => "rg32f",     // Two channel 32-bit float
-                        wgpu::TextureFormat::Rgba32Float => "rgba32f", // Four channel 32-bit float
+                        wgpu::TextureFormat::R32Float => "r32f",       // Single component 32-bit float
+                        wgpu::TextureFormat::Rg32Float => "rg32f",     // Two component 32-bit float
+                        wgpu::TextureFormat::Rgba32Float => "rgba32f", // Four component 32-bit float
                         _ => "rgba32f",                                // Default fallback
                     };
                     format!("layout(binding = {}, {}) uniform {} image2D {};\n", binding_index, format_string, access_type, texture_name)

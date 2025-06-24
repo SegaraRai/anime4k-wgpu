@@ -10,7 +10,7 @@ passes:
     outputs:
       - id: luma
         binding: 1
-        channels: 1
+        components: 1
         scale_factor: ["1", "1"]
   - id: gaussian_x_1
     file: effects_darken_pass2_gaussian_x_noscaling.wgsl
@@ -20,7 +20,7 @@ passes:
     outputs:
       - id: gaussian_x1
         binding: 1
-        channels: 1
+        components: 1
         scale_factor: ["1", "1"]
   - id: gaussian_y_1
     file: effects_darken_pass3_gaussian_y_noscaling.wgsl
@@ -32,7 +32,7 @@ passes:
     outputs:
       - id: gaussian_y1
         binding: 2
-        channels: 1
+        components: 1
         scale_factor: ["1", "1"]
   - id: gaussian_x_2
     file: effects_darken_pass4_gaussian_x2.wgsl
@@ -42,7 +42,7 @@ passes:
     outputs:
       - id: gaussian_x2
         binding: 1
-        channels: 1
+        components: 1
         scale_factor: ["1", "1"]
   - id: gaussian_y_2
     file: effects_darken_pass5_gaussian_y2_apply.wgsl
@@ -54,5 +54,5 @@ passes:
     outputs:
       - id: RESULT
         binding: 2
-        channels: 4
+        components: 4
         scale_factor: ["1", "1"]

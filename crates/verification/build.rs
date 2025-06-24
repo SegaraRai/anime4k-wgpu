@@ -45,11 +45,11 @@ fn create_manifest(shader_name: &str, passes: &[(String, WgslStageShader)]) -> S
             manifest.push_str(&format!("        binding: {}\n", binding));
         }
 
-        // Output texture binding (always RGBA with 4 channels)
+        // Output texture binding (always RGBA with 4 components)
         manifest.push_str("    outputs:\n");
         manifest.push_str(&format!("      - id: {}\n", wgsl_shader.output.1));
         manifest.push_str(&format!("        binding: {}\n", &wgsl_shader.output.0));
-        manifest.push_str("        channels: 4\n");
+        manifest.push_str("        components: 4\n");
         manifest.push_str(&format!("        scale_factor: {}\n", &str_scale_factor));
 
         // Optional sampler binding if the shader requires texture sampling

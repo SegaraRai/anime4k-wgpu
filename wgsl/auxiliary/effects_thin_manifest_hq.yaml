@@ -10,7 +10,7 @@ passes:
     outputs:
       - id: luma
         binding: 1
-        channels: 1
+        components: 1
         scale_factor: ["1", "1"]
   - id: sobel_x
     file: effects_thin_pass2_sobel_x_noscaling.wgsl
@@ -20,7 +20,7 @@ passes:
     outputs:
       - id: sobel_x
         binding: 1
-        channels: 2
+        components: 2
         scale_factor: ["1", "1"]
   - id: sobel_y
     file: effects_thin_pass3_sobel_y.wgsl
@@ -30,7 +30,7 @@ passes:
     outputs:
       - id: sobel_y
         binding: 1
-        channels: 1
+        components: 1
         scale_factor: ["1", "1"]
   - id: gaussian_x
     file: effects_thin_pass4_gaussian_x.wgsl
@@ -40,7 +40,7 @@ passes:
     outputs:
       - id: gaussian_x
         binding: 1
-        channels: 1
+        components: 1
         scale_factor: ["1", "1"]
   - id: gaussian_y
     file: effects_thin_pass5_gaussian_y.wgsl
@@ -50,7 +50,7 @@ passes:
     outputs:
       - id: gaussian_y
         binding: 1
-        channels: 1
+        components: 1
         scale_factor: ["1", "1"]
   - id: kernel_x
     file: effects_thin_pass6_kernel_x.wgsl
@@ -60,7 +60,7 @@ passes:
     outputs:
       - id: kernel_x
         binding: 1
-        channels: 2
+        components: 2
         scale_factor: ["1", "1"]
   - id: kernel_y
     file: effects_thin_pass7_kernel_y.wgsl
@@ -70,7 +70,7 @@ passes:
     outputs:
       - id: kernel_y
         binding: 1
-        channels: 2
+        components: 2
         scale_factor: ["1", "1"]
   - id: warp_apply
     file: effects_thin_pass8_warp.wgsl
@@ -82,7 +82,7 @@ passes:
     outputs:
       - id: RESULT
         binding: 4
-        channels: 4
+        components: 4
         scale_factor: ["1", "1"]
     samplers:
       - binding: 1

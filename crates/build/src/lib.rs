@@ -53,7 +53,7 @@ pub fn cnn_glsl_to_executable_pipeline(glsl_filepath: &str, helpers_dir: &str) -
             outputs: vec![pipelines::TextureOutput {
                 binding: wgsl_shader.output.0,
                 id: wgsl_shader.output.1.clone(),
-                channels: 4, // Always 4 channels for CNNs
+                components: 4, // Always 4 components for CNNs
                 scale_factor: [
                     pipelines::ScaleFactor {
                         numerator: wgsl_shader.scale_factor.parse().unwrap(),
