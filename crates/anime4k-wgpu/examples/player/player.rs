@@ -334,14 +334,7 @@ impl VideoPlayback {
         let surface = vulkan_instance.wgpu_instance().create_surface(window).unwrap();
 
         // Create Vulkan device with required features for video and graphics
-        let vulkan_device = vulkan_instance
-            .create_device(
-                // Enable texture format features and float32 filtering for Anime4K
-                wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES | wgpu::Features::FLOAT32_FILTERABLE,
-                wgpu::Limits::default(),
-                Some(&surface),
-            )
-            .unwrap();
+        let vulkan_device = vulkan_instance.create_device(wgpu::Features::FLOAT32_FILTERABLE, wgpu::Limits::default(), Some(&surface)).unwrap();
 
         // Create a bounded channel for frame communication between threads
         let (tx, rx) = mpsc::sync_channel(FRAME_BUFFER_LENGTH);

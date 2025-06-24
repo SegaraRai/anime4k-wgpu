@@ -92,11 +92,8 @@ impl WgslReferenceEngine {
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
                 label: Some("WGSL Reference Engine"),
-                required_features: wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES | wgpu::Features::FLOAT32_FILTERABLE,
-                required_limits: wgpu::Limits {
-                    max_storage_textures_per_shader_stage: 30,
-                    ..Default::default()
-                },
+                required_features: wgpu::Features::FLOAT32_FILTERABLE,
+                required_limits: wgpu::Limits::default(),
                 memory_hints: wgpu::MemoryHints::default(),
                 trace: Default::default(),
             })

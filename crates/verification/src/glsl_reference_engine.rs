@@ -518,12 +518,8 @@ impl GlslReferenceEngine {
             .request_device(&wgpu::DeviceDescriptor {
                 label: Some("GLSL Reference Engine"),
                 // Request features needed for float texture filtering and format-specific operations
-                required_features: wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES | wgpu::Features::FLOAT32_FILTERABLE,
-                required_limits: wgpu::Limits {
-                    // Allow many storage textures for complex multi-pass GLSL pipelines
-                    max_storage_textures_per_shader_stage: 30,
-                    ..Default::default()
-                },
+                required_features: wgpu::Features::FLOAT32_FILTERABLE,
+                required_limits: wgpu::Limits::default(),
                 memory_hints: wgpu::MemoryHints::default(),
                 trace: Default::default(),
             })

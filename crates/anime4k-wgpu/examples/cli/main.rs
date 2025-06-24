@@ -128,7 +128,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create device with required features for Anime4K processing
     let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
         label: None,
-        required_features: wgpu::Features::FLOAT32_FILTERABLE, // Required for texture filtering
+        required_features: wgpu::Features::FLOAT32_FILTERABLE,
         required_limits: wgpu::Limits::default(),
         memory_hints: wgpu::MemoryHints::default(),
         trace: Default::default(),
