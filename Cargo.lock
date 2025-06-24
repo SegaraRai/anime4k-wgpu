@@ -114,7 +114,6 @@ dependencies = [
  "naga 24.0.0",
  "pollster",
  "regex",
- "thiserror 2.0.12",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -128,16 +127,12 @@ dependencies = [
 name = "anime4k-wgpu-build"
 version = "1.0.0"
 dependencies = [
- "bytemuck",
- "bytes",
  "futures-intrusive",
- "half",
  "image",
  "pollster",
  "regex",
  "serde",
  "serde_norway",
- "thiserror 2.0.12",
  "tokio",
  "wgpu",
 ]
@@ -148,13 +143,10 @@ version = "1.0.0"
 dependencies = [
  "anime4k-wgpu-build",
  "bytemuck",
- "bytes",
  "futures-intrusive",
- "half",
  "image",
  "pollster",
  "regex",
- "thiserror 2.0.12",
  "tokio",
  "wgpu",
 ]
@@ -983,7 +975,6 @@ version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "459196ed295495a68f7d7fe1d84f6c4b7ff0e21fe3017b2f283c6fac3ad803c9"
 dependencies = [
- "bytemuck",
  "cfg-if",
  "crunchy",
  "num-traits",

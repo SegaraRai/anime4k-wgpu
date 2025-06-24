@@ -13,12 +13,8 @@ serde = { version = "1", features = ["derive"] }
 serde_norway = "0.9"
 
 [dev-dependencies]
+wgpu = { version = "25", features = ["glsl"] }
+image = "0.25"
 tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread"] }
 futures-intrusive = "0.5"
 pollster = "0.4"
-half = { version = "2", features = ["bytemuck"] }
-bytes = "1"
-bytemuck = { version = "1", features = ["derive"] }
-thiserror = "2"
-image = "0.25"
-wgpu = { version = "25", features = ["glsl"] }
