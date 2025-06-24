@@ -25,7 +25,7 @@ fn get_preset_pairs() -> Vec<(&'static str, &'static str)> {
         ("anime4k-glsl/Experimental-Effects/Anime4K_Thin_Fast.glsl", "wgsl/auxiliary/effects_thin_manifest_fast.yaml"),
         ("anime4k-glsl/Experimental-Effects/Anime4K_Thin_VeryFast.glsl", "wgsl/auxiliary/effects_thin_manifest_veryfast.yaml"),
         ("anime4k-glsl/Upscale/Anime4K_Upscale_DoG_x2.glsl", "wgsl/auxiliary/upscale_dog_x2_manifest.yaml"),
-        ("anime4k-glsl/Upscale/Anime4K_Upscale_DTD_x2.glsl", "wgsl/auxiliary/upscale_dtd_x2_manifest.yaml"),
+        //("anime4k-glsl/Upscale/Anime4K_Upscale_DTD_x2.glsl", "wgsl/auxiliary/upscale_dtd_x2_manifest.yaml"),
         ("anime4k-glsl/Upscale/Anime4K_Upscale_Original_x2.glsl", "wgsl/auxiliary/upscale_original_x2_manifest.yaml"),
     ]
 }
@@ -43,7 +43,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let input_image = image::open(input_path).map_err(|e| format!("Failed to open input image: {e}"))?;
 
     for (glsl_path, wgsl_path) in get_preset_pairs() {
-        println!("  Processing shader: {glsl_path} and {wgsl_path}");
+        // println!("  Processing shader: {glsl_path} and {wgsl_path}");
 
         let glsl_content = std::fs::read_to_string(glsl_path).map_err(|e| format!("Failed to read GLSL shader file {}: {e}", glsl_path))?;
         let glsl_engine = GlslReferenceEngine::new().await?;
