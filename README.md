@@ -57,7 +57,7 @@ anime4k-wgpu/
 ### Prerequisites
 
 - Rust (2024 edition)
-- A GPU with WebGPU support
+- A GPU that supports filtering 32-bit floating point textures (`"float32-filterable"` feature in WebGPU)
 - For video playback: Vulkan-compatible GPU
 
 ### Installation
