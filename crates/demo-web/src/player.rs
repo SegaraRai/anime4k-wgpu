@@ -18,6 +18,7 @@ struct WebGPUContext {
     anime4k_executor: Option<PipelineExecutor>,
     anime4k_output_texture: Option<Texture>,
     anime4k_source_texture: Option<Texture>, // Source texture for pipeline input
+    video_texture: Option<Texture>,          // Cached video texture
     display_pipeline: RenderPipeline,
     display_bind_group_layout: BindGroupLayout, // Restored for texture binding
 }
@@ -38,6 +39,10 @@ pub struct VideoPlayer {
 
     // Frame management
     frame_count: u32,
+    last_video_time: f64,
+    last_preset: Anime4KPreset,
+    last_performance_preset: Anime4KPerformancePreset,
+    needs_update: bool,
 }
 
 impl VideoPlayer {
@@ -56,6 +61,10 @@ impl VideoPlayer {
             canvas_size,
             video_size: None,
             frame_count: 0,
+            last_video_time: -1.0,
+            last_preset: Anime4KPreset::Off,
+            last_performance_preset: Anime4KPerformancePreset::Light,
+            needs_update: false,
         };
 
         // Initialize WebGPU
@@ -126,11 +135,7 @@ impl VideoPlayer {
 
     /// Renders the current video frame using WebGPU
     pub fn render(&mut self) {
-        // Simple frame limiting - only render every 4th frame to reduce load
         self.frame_count += 1;
-        if self.frame_count % 4 != 0 {
-            return; // Skip 3 out of 4 frames
-        }
 
         // Log every 60 rendered frames to reduce spam
         if self.frame_count % 240 == 0 {
@@ -186,20 +191,26 @@ impl VideoPlayer {
 
     /// Sets the Anime4K preset
     pub fn set_anime4k_preset(&mut self, preset: Anime4KPreset) {
-        self.current_preset = preset;
-        web_sys::console::log_1(&format!("Anime4K preset changed to: {:?}", preset).into());
+        if self.current_preset != preset {
+            self.current_preset = preset;
+            self.needs_update = true;
+            web_sys::console::log_1(&format!("Anime4K preset changed to: {:?}", preset).into());
 
-        // Recreate Anime4K pipeline with new preset and current frame size
-        self.recreate_pipeline_if_needed();
+            // Recreate Anime4K pipeline with new preset and current frame size
+            self.recreate_pipeline_if_needed();
+        }
     }
 
     /// Sets the Anime4K performance preset
     pub fn set_anime4k_performance_preset(&mut self, preset: Anime4KPerformancePreset) {
-        self.current_performance_preset = preset;
-        web_sys::console::log_1(&format!("Anime4K performance preset changed to: {:?}", preset).into());
+        if self.current_performance_preset != preset {
+            self.current_performance_preset = preset;
+            self.needs_update = true;
+            web_sys::console::log_1(&format!("Anime4K performance preset changed to: {:?}", preset).into());
 
-        // Recreate Anime4K pipeline with new performance preset and current frame size
-        self.recreate_pipeline_if_needed();
+            // Recreate Anime4K pipeline with new performance preset and current frame size
+            self.recreate_pipeline_if_needed();
+        }
     }
 
     /// Initialize WebGPU context
@@ -348,6 +359,7 @@ impl VideoPlayer {
             anime4k_executor: None,
             anime4k_output_texture: None,
             anime4k_source_texture: None,
+            video_texture: None,
             display_pipeline,
             display_bind_group_layout, // Restored
         };
@@ -411,6 +423,40 @@ impl VideoPlayer {
 
         web_sys::console::log_1(&format!("Anime4K pipeline created with {} passes for {}x{} frame", pipelines.len(), width, height).into());
         Ok(())
+    }
+
+    /// Checks if video frame needs updating based on video time and settings changes
+    fn needs_frame_update(&mut self) -> bool {
+        // Check for preset/performance changes
+        if self.needs_update {
+            return true;
+        }
+
+        // Check for video frame changes
+        if let Some(ref video) = self.video_element {
+            if video.ready_state() >= 2 {
+                let current_time = video.current_time();
+                if (current_time - self.last_video_time).abs() > 0.001 {
+                    // More than 1ms difference
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
+    /// Updates tracking variables after processing a frame
+    fn mark_frame_updated(&mut self) {
+        self.needs_update = false;
+        self.last_preset = self.current_preset;
+        self.last_performance_preset = self.current_performance_preset;
+
+        if let Some(ref video) = self.video_element {
+            if video.ready_state() >= 2 {
+                self.last_video_time = video.current_time();
+            }
+        }
     }
 
     /// Recreates the Anime4K pipeline if needed (when preset or video size changes)
@@ -482,6 +528,11 @@ impl VideoPlayer {
 
     /// Process video frame with Anime4K
     fn process_video_frame(&mut self) -> Result<(), String> {
+        // Early exit if no update is needed
+        if !self.needs_frame_update() {
+            return Ok(());
+        }
+
         // Check for video size changes first
         let mut size_changed = false;
         if let Some(ref video) = self.video_element {
@@ -506,13 +557,16 @@ impl VideoPlayer {
         }
 
         // Take ownership of webgpu context temporarily to avoid borrowing conflicts
-        let webgpu_context = self.webgpu_context.take().ok_or("WebGPU not initialized")?;
+        let mut webgpu_context = self.webgpu_context.take().ok_or("WebGPU not initialized")?;
 
-        // Create input texture for processing
+        // Update input texture for processing
         let input_texture = if let Some(ref video) = self.video_element {
             if video.ready_state() >= 2 {
-                match self.create_video_texture(&webgpu_context, video) {
-                    Ok(texture) => texture,
+                match self.update_video_texture(&mut webgpu_context, video) {
+                    Ok(()) => {
+                        // Use the cached video texture
+                        webgpu_context.video_texture.as_ref().unwrap().clone()
+                    }
                     Err(_) => {
                         // Return context and skip this frame
                         self.webgpu_context = Some(webgpu_context);
@@ -650,11 +704,14 @@ impl VideoPlayer {
         // Return the context
         self.webgpu_context = Some(webgpu_context);
 
+        // Mark frame as updated to avoid unnecessary reprocessing
+        self.mark_frame_updated();
+
         Ok(())
     }
 
-    /// Create video texture from HTML video element by extracting current frame
-    fn create_video_texture(&self, webgpu: &WebGPUContext, video: &HtmlVideoElement) -> Result<Texture, String> {
+    /// Updates or creates video texture from HTML video element using efficient external copy
+    fn update_video_texture(&self, webgpu: &mut WebGPUContext, video: &HtmlVideoElement) -> Result<(), String> {
         let video_width = video.video_width();
         let video_height = video.video_height();
 
@@ -667,7 +724,45 @@ impl VideoPlayer {
             return Err("Video not ready for frame extraction".to_string());
         }
 
-        web_sys::console::log_1(&format!("Extracting video frame: {}x{}", video_width, video_height).into());
+        // Check if we need to create or recreate the texture
+        let needs_new_texture = webgpu.video_texture.as_ref().map_or(true, |tex| tex.width() != video_width || tex.height() != video_height);
+
+        if needs_new_texture {
+            // Create texture with correct format for Anime4K pipeline
+            let texture = webgpu.device.create_texture(&TextureDescriptor {
+                label: Some("Video Frame Texture"),
+                size: Extent3d {
+                    width: video_width,
+                    height: video_height,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: TextureDimension::D2,
+                format: TextureFormat::Rgba32Float,
+                usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST | TextureUsages::STORAGE_BINDING | TextureUsages::COPY_SRC | TextureUsages::RENDER_ATTACHMENT,
+                view_formats: &[],
+            });
+
+            webgpu.video_texture = Some(texture);
+            web_sys::console::log_1(&format!("Created new video texture: {}x{}", video_width, video_height).into());
+        }
+
+        // Use copyExternalImageToTexture for efficient video frame copy
+        let texture = webgpu.video_texture.as_ref().unwrap();
+
+        // For now, use Canvas 2D approach as copyExternalImageToTexture has compatibility issues
+        // TODO: Try direct copy when WebGPU external image support is more stable
+        web_sys::console::log_1(&"Using Canvas 2D approach for video frame extraction".into());
+        self.copy_video_via_canvas(webgpu, video, texture)?;
+
+        Ok(())
+    }
+
+    /// Fallback method to copy video via Canvas 2D when direct copy fails
+    fn copy_video_via_canvas(&self, webgpu: &WebGPUContext, video: &HtmlVideoElement, texture: &Texture) -> Result<(), String> {
+        let video_width = video.video_width();
+        let video_height = video.video_height();
 
         // Create a temporary canvas to extract video frame
         let document = web_sys::window().unwrap().document().unwrap();
@@ -707,26 +802,10 @@ impl VideoPlayer {
             float_data.extend_from_slice(&a.to_le_bytes());
         }
 
-        // Create texture with correct format for Anime4K pipeline
-        let texture = webgpu.device.create_texture(&TextureDescriptor {
-            label: Some("Video Frame Texture"),
-            size: Extent3d {
-                width: video_width,
-                height: video_height,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: TextureDimension::D2,
-            format: TextureFormat::Rgba32Float,
-            usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST | TextureUsages::STORAGE_BINDING | TextureUsages::COPY_SRC, // Added COPY_SRC
-            view_formats: &[],
-        });
-
-        // Upload the video frame data to the texture
+        // Upload the video frame data to the texture (Rgba32Float format)
         webgpu.queue.write_texture(
             TexelCopyTextureInfo {
-                texture: &texture,
+                texture,
                 mip_level: 0,
                 origin: Origin3d::ZERO,
                 aspect: TextureAspect::All,
@@ -744,8 +823,7 @@ impl VideoPlayer {
             },
         );
 
-        web_sys::console::log_1(&format!("Video frame extracted and uploaded to GPU: {}x{} pixels", video_width, video_height).into());
-        Ok(texture)
+        Ok(())
     }
 
     /// Create a simple test texture when no video is loaded
@@ -762,7 +840,7 @@ impl VideoPlayer {
             mip_level_count: 1,
             sample_count: 1,
             dimension: TextureDimension::D2,
-            format: TextureFormat::Rgba32Float,
+            format: TextureFormat::Rgba8UnormSrgb,
             usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST | TextureUsages::STORAGE_BINDING | TextureUsages::COPY_SRC,
             view_formats: &[],
         });
