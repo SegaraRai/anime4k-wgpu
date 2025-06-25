@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo.exe check)",
+      "Bash(/mnt/f/.cargo/bin/cargo.exe check)",
+      "Bash(cargo check:*)",
+      "Bash(wasm-pack build:*)"
+    ],
+    "deny": []
+  }
+}

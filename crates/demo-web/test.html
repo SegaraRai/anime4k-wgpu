@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Debug Test</title>
+  </head>
+  <body>
+    <div id="status">Loading...</div>
+    <div id="logs"></div>
+
+    <script type="module">
+      import init, { run } from "./pkg/demo_web.js";
+
+      const statusDiv = document.getElementById("status");
+      const logsDiv = document.getElementById("logs");
+
+      // Capture console messages
+      const originalLog = console.log;
+      const originalError = console.error;
+
+      console.log = function (...args) {
+        originalLog.apply(console, args);
+        logsDiv.innerHTML +=
+          '<div style="color: blue;">LOG: ' + args.join(" ") + "</div>";
+      };
+
+      console.error = function (...args) {
+        originalError.apply(console, args);
+        logsDiv.innerHTML +=
+          '<div style="color: red;">ERROR: ' + args.join(" ") + "</div>";
+      };
+
+      async function start() {
+        try {
+          statusDiv.innerHTML = "Initializing WASM...";
+          await init();
+          statusDiv.innerHTML = "WASM loaded, starting app...";
+          run();
+          statusDiv.innerHTML = "App started successfully!";
+        } catch (error) {
+          console.error("Failed to initialize:", error);
+          statusDiv.innerHTML = `Failed to load: ${error}`;
+        }
+      }
+
+      start();
+    </script>
+  </body>
+</html>
