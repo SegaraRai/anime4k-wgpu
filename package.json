@@ -14,10 +14,11 @@
     "@iconify-json/akar-icons": "^1.2.2",
     "@iconify/tailwind4": "^1.0.6",
     "@tailwindcss/vite": "^4.1.11",
-    "@webgpu/types": "^0.1.62",
+    "@webgpu/types": "^0.1.63",
     "astro": "^5.10.1",
+    "css-select": "5.2.0",
     "daisyui": "^5.0.43",
-    "prettier": "^3.6.1",
+    "prettier": "^3.6.2",
     "tailwindcss": "^4.1.11",
     "typescript": "^5.8.3"
   },

@@ -4,40 +4,22 @@ import {
   type Anime4KConfig,
   type Anime4KController,
 } from "../anime4k/player";
-import { VideoControls, type CompareConfig } from "./VideoControls";
+import { VideoControls } from "./VideoControls";
+import type { CompareConfig } from "./constants";
 
-function createCompareStyle(compare: CompareConfig) {
-  switch (compare.mode) {
-    case "onyx":
-      return {
-        opacity: compare.ratio,
-      };
-
-    case "left":
-      return {
-        clipPath: `inset(0 ${100 - compare.ratio * 100}% 0 0)`,
-      };
-
-    case "right":
-      return {
-        clipPath: `inset(0 0 0 ${100 - compare.ratio * 100}%)`,
-      };
-
-    case "top":
-      return {
-        clipPath: `inset(0 0 ${100 - compare.ratio * 100}% 0)`,
-      };
-
-    case "bottom":
-      return {
-        clipPath: `inset(${100 - compare.ratio * 100}% 0 0 0)`,
-      };
-  }
-
-  return {};
-}
-
-export function VideoPlayer({ src }: { readonly src: string }) {
+export function VideoPlayer({
+  src,
+  config,
+  compare,
+  onUpdateConfig,
+  onUpdateCompare,
+}: {
+  readonly src: string;
+  readonly config: Anime4KConfig | null;
+  readonly compare: CompareConfig;
+  readonly onUpdateConfig: (config: Anime4KConfig | null) => void;
+  readonly onUpdateCompare: (compare: CompareConfig) => void;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -45,19 +27,8 @@ export function VideoPlayer({ src }: { readonly src: string }) {
   const [video, setVideo] = useState<HTMLVideoElement | null>(null);
   const controllerRef = useRef<Anime4KController | null>(null);
 
-  const [config, setConfig] = useState<Anime4KConfig | null>({
-    preset: "a",
-    performance: "light",
-    scale: 2.0,
-  });
-
-  const [compare, setCompare] = useState<CompareConfig>({
-    mode: "left",
-    ratio: 0.5,
-  });
-
   useEffect(() => {
-    if (!canvasRef.current || !videoRef.current) {
+    if (!canvasRef.current || !videoRef.current || !config) {
       setVideo(null);
       return;
     }
@@ -75,7 +46,7 @@ export function VideoPlayer({ src }: { readonly src: string }) {
       setVideo(null);
       controller.cleanup();
     };
-  }, []);
+  }, [config]);
 
   const fullscreen = useCallback((): void => {
     const container = containerRef.current;
@@ -88,18 +59,39 @@ export function VideoPlayer({ src }: { readonly src: string }) {
     }
   }, []);
 
+  const compareStyle = {
+    none: {},
+    onyx: {
+      opacity: compare.ratio,
+    },
+    left: {
+      clipPath: `inset(0 ${100 - compare.ratio * 100}% 0 0)`,
+    },
+    right: {
+      clipPath: `inset(0 0 0 ${100 - compare.ratio * 100}%)`,
+    },
+    top: {
+      clipPath: `inset(0 0 ${100 - compare.ratio * 100}% 0)`,
+    },
+    bottom: {
+      clipPath: `inset(${100 - compare.ratio * 100}% 0 0 0)`,
+    },
+  }[compare.mode];
+
   return (
-    <div ref={containerRef} class="relative w-screen h-screen bg-blue-100">
+    <div ref={containerRef} class="relative w-full h-full">
       <video
         ref={videoRef}
         class="w-full h-full object-contain"
         src={src}
         onError={(e) => console.error("❌ Video error:", e)}
-      />
+      >
+        <track kind="captions" />
+      </video>
       <canvas
         ref={canvasRef}
         class="absolute w-full h-full inset-0 object-contain pointer-events-none"
-        style={createCompareStyle(compare)}
+        style={compareStyle}
       />
       {video && (
         <VideoControls
@@ -107,10 +99,12 @@ export function VideoPlayer({ src }: { readonly src: string }) {
           config={config}
           compare={compare}
           onUpdateConfig={(newConfig) => {
-            controllerRef.current?.updateConfig(newConfig);
-            setConfig(newConfig);
+            if (newConfig) {
+              controllerRef.current?.updateConfig(newConfig);
+            }
+            onUpdateConfig(newConfig);
           }}
-          onUpdateCompare={setCompare}
+          onUpdateCompare={onUpdateCompare}
           onFullscreen={fullscreen}
         />
       )}

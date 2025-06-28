@@ -4,11 +4,15 @@ import type {
   Anime4KPerformancePreset,
   Anime4KPreset,
 } from "../anime4k/presets";
-
-export interface CompareConfig {
-  readonly mode: "none" | "onyx" | "left" | "right" | "top" | "bottom";
-  readonly ratio: number;
-}
+import {
+  COMPARE_MODES,
+  DEFAULT_CONFIG,
+  MAX_SCALE_FACTOR,
+  MIN_SCALE_FACTOR,
+  PERFORMANCE_PRESETS,
+  PRESETS,
+  type CompareConfig,
+} from "./constants";
 
 function formatTime(
   current: number | null,
@@ -282,41 +286,6 @@ export function CompareController({
   );
 }
 
-const MIN_SCALE_FACTOR = 1;
-const MAX_SCALE_FACTOR = 8;
-
-const PRESETS: [Anime4KPreset, string][] = [
-  ["a", "A (Restore → Upscale)"],
-  ["b", "B (Restore Soft → Upscale)"],
-  ["c", "C (Upscale Denoise)"],
-  ["aa", "AA (Restore → Upscale → Restore)"],
-  ["bb", "BB (Restore Soft → Upscale → Restore Soft)"],
-  ["ca", "CA (Upscale Denoise → Restore)"],
-];
-
-const PERFORMANCE_PRESETS: [Anime4KPerformancePreset, string][] = [
-  ["light", "Light (Fast, Low Quality)"],
-  ["medium", "Medium (Balanced)"],
-  ["high", "High (Slow, High Quality)"],
-  ["ultra", "Ultra (Very Slow, Very High Quality)"],
-  ["extreme", "Extreme (Insane Quality)"],
-];
-
-const FALLBACK_CONFIG: Anime4KConfig = {
-  preset: "a",
-  performance: "medium",
-  scale: 2,
-};
-
-const COMPARE_MODES: [CompareConfig["mode"], string][] = [
-  ["left", "Split Left/Right"],
-  ["right", "Split Right/Left"],
-  ["top", "Split Top/Bottom"],
-  ["bottom", "Split Bottom/Top"],
-  ["onyx", "Blend Overlay"],
-  ["none", "No Comparison"],
-];
-
 export function VideoControls({
   video,
   config,
@@ -333,7 +302,7 @@ export function VideoControls({
   readonly onFullscreen: () => void;
 }) {
   const [lastConfig, setLastConfig] = useState<Anime4KConfig | null>(null);
-  const displayConfig = config ?? lastConfig ?? FALLBACK_CONFIG;
+  const displayConfig = config ?? lastConfig ?? DEFAULT_CONFIG;
 
   const updateConfig = (newConfig: Anime4KConfig | null): void => {
     if (newConfig) {
@@ -426,14 +395,14 @@ export function VideoControls({
   const toggleCompare = useCallback(
     (reverse = false): void => {
       const currentIndex = COMPARE_MODES.findIndex(
-        ([mode]) => mode === compare.mode
+        ({ value }) => value === compare.mode
       );
       const offset = reverse ? -1 : 1;
       const nextIndex =
         (currentIndex + offset + COMPARE_MODES.length) % COMPARE_MODES.length;
       onUpdateCompare({
         ...compare,
-        mode: COMPARE_MODES[nextIndex][0],
+        mode: COMPARE_MODES[nextIndex].value,
       });
     },
     [compare, onUpdateCompare]
@@ -586,12 +555,12 @@ export function VideoControls({
                     tabindex={0}
                     class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
                   >
-                    {COMPARE_MODES.map(([mode, label]) => (
-                      <li key={mode}>
+                    {COMPARE_MODES.map(({ value, label }) => (
+                      <li key={value}>
                         <button
-                          class={compare.mode === mode ? "menu-active" : ""}
-                          aria-pressed={compare.mode === mode}
-                          onClick={() => setCompareMode(mode)}
+                          class={compare.mode === value ? "menu-active" : ""}
+                          aria-pressed={compare.mode === value}
+                          onClick={() => setCompareMode(value)}
                         >
                           {label}
                         </button>
@@ -621,7 +590,7 @@ export function VideoControls({
                           checked={config !== null}
                           onChange={(event) => {
                             if (event.currentTarget.checked) {
-                              updateConfig(FALLBACK_CONFIG);
+                              updateConfig(DEFAULT_CONFIG);
                             } else {
                               updateConfig(null);
                             }
@@ -672,11 +641,11 @@ export function VideoControls({
                             });
                           }}
                         >
-                          {PRESETS.map(([preset, label]) => (
+                          {PRESETS.map(({ value, label }) => (
                             <option
-                              key={preset}
-                              value={preset}
-                              selected={config?.preset === preset}
+                              key={value}
+                              value={value}
+                              selected={config?.preset === value}
                             >
                               {label}
                             </option>
@@ -696,11 +665,11 @@ export function VideoControls({
                             });
                           }}
                         >
-                          {PERFORMANCE_PRESETS.map(([preset, label]) => (
+                          {PERFORMANCE_PRESETS.map(({ value, label }) => (
                             <option
-                              key={preset}
-                              value={preset}
-                              selected={displayConfig.performance === preset}
+                              key={value}
+                              value={value}
+                              selected={displayConfig.performance === value}
                             >
                               {label}
                             </option>

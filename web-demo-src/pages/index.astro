@@ -1,8 +1,12 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { VideoPlayer } from "../components/VideoPlayer.tsx";
+import { VideoPlayerPage } from "../components/VideoPlayerPage";
 ---
 
-<Layout>
-  <VideoPlayer src="/test.mp4" client:load />
+<Layout
+  rootClass="w-full h-full scroll-smooth"
+  bodyClass="w-full h-full overflow-hidden"
+  mainClass="w-full h-full overflow-auto snap-y snap-mandatory"
+>
+  <VideoPlayerPage client:load />
 </Layout>
