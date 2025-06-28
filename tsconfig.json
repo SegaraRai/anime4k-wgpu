@@ -7,7 +7,6 @@
   "exclude": [
     "crates",
     "target",
-    "node_modules",
     "dist"
   ],
   "compilerOptions": {

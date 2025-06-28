@@ -13,42 +13,65 @@ export function VideoPlayer({
   compare,
   onUpdateConfig,
   onUpdateCompare,
+  onLoadedMetadata,
 }: {
   readonly src: string;
   readonly config: Anime4KConfig | null;
   readonly compare: CompareConfig;
   readonly onUpdateConfig: (config: Anime4KConfig | null) => void;
   readonly onUpdateCompare: (compare: CompareConfig) => void;
+  readonly onLoadedMetadata?: (event: Event) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
 
+  const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
   const [video, setVideo] = useState<HTMLVideoElement | null>(null);
-  const controllerRef = useRef<Anime4KController | null>(null);
 
+  const canvasRefCallback = useCallback(
+    (element: HTMLCanvasElement | null): void => {
+      setCanvas(element);
+    },
+    []
+  );
+  const videoRefCallback = useCallback(
+    (element: HTMLVideoElement | null): void => {
+      setVideo(element);
+    },
+    []
+  );
+
+  const [controllerState, setControllerState] = useState<{
+    controller: Anime4KController;
+    video: HTMLVideoElement | null;
+    canvas: HTMLCanvasElement | null;
+  } | null>(null);
   useEffect(() => {
-    if (!canvasRef.current || !videoRef.current || !config) {
-      setVideo(null);
+    if (!canvas || !video) {
       return;
     }
 
-    setVideo(videoRef.current);
-
-    const controller = setupAnime4K(
-      canvasRef.current,
-      videoRef.current,
-      config
-    );
-    controllerRef.current = controller;
+    const controller = setupAnime4K(canvas, video);
+    setControllerState({
+      controller,
+      video,
+      canvas,
+    });
 
     return (): void => {
-      setVideo(null);
       controller.cleanup();
+      setControllerState(null);
     };
-  }, [config]);
+  }, [canvas, video]);
 
-  const fullscreen = useCallback((): void => {
+  useEffect(() => {
+    if (!controllerState || !config) {
+      return;
+    }
+
+    controllerState.controller.updateConfig(config);
+  }, [controllerState, config]);
+
+  const handleFullscreen = useCallback((): void => {
     const container = containerRef.current;
     if (!container) {
       return;
@@ -81,15 +104,16 @@ export function VideoPlayer({
   return (
     <div ref={containerRef} class="relative w-full h-full">
       <video
-        ref={videoRef}
+        ref={videoRefCallback}
         class="w-full h-full object-contain"
         src={src}
         onError={(e) => console.error("❌ Video error:", e)}
+        onLoadedMetadata={onLoadedMetadata}
       >
         <track kind="captions" />
       </video>
       <canvas
-        ref={canvasRef}
+        ref={canvasRefCallback}
         class="absolute w-full h-full inset-0 object-contain pointer-events-none"
         style={compareStyle}
       />
@@ -98,14 +122,9 @@ export function VideoPlayer({
           video={video}
           config={config}
           compare={compare}
-          onUpdateConfig={(newConfig) => {
-            if (newConfig) {
-              controllerRef.current?.updateConfig(newConfig);
-            }
-            onUpdateConfig(newConfig);
-          }}
+          onUpdateConfig={onUpdateConfig}
           onUpdateCompare={onUpdateCompare}
-          onFullscreen={fullscreen}
+          onFullscreen={handleFullscreen}
         />
       )}
     </div>

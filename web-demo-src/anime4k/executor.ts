@@ -340,7 +340,7 @@ async function createBoundPipeline(
       passes,
       cleanup: (): void => {
         for (const [texture] of physicalTextureMap.values()) {
-          texture.destroy();
+          //texture.destroy();
         }
       },
     },

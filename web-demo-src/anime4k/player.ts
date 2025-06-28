@@ -187,10 +187,9 @@ async function createContext(
   config: Anime4KConfig | null
 ): Promise<RenderingContext> {
   // Update canvas dimensions
-  canvas.width = Math.floor(video.videoWidth * Math.max(config?.scale ?? 1, 1));
-  canvas.height = Math.floor(
-    video.videoHeight * Math.max(config?.scale ?? 1, 1)
-  );
+  const effectiveScale = Math.max(config?.scale ?? 1, 1);
+  canvas.width = Math.floor(video.videoWidth * effectiveScale);
+  canvas.height = Math.floor(video.videoHeight * effectiveScale);
 
   canvasContext.configure({
     device,
@@ -362,6 +361,9 @@ export function setupAnime4K(
   video: HTMLVideoElement,
   config: Anime4KConfig | null = null
 ): Anime4KController {
+  const abortController = new AbortController();
+  const { signal } = abortController;
+
   let currentConfig: Anime4KConfig | null = config && { ...config };
   let contextPromise: Promise<RenderingContext> | null = null;
   let timerId: number | null = null;
@@ -378,9 +380,13 @@ export function setupAnime4K(
       requiredFeatures: ["float32-filterable"],
     });
 
-    device.addEventListener("uncapturederror", (event) => {
-      console.error("🚨 WebGPU uncaptured error:", event.error);
-    });
+    device.addEventListener(
+      "uncapturederror",
+      (event) => {
+        console.error("🚨 WebGPU uncaptured error:", event.error);
+      },
+      { signal }
+    );
 
     // Configure the canvas for WebGPU
     const canvasContext = canvas.getContext("webgpu");
@@ -409,6 +415,10 @@ export function setupAnime4K(
       if (timerId != null) {
         video.cancelVideoFrameCallback(timerId);
         timerId = null;
+      }
+
+      if (signal.aborted) {
+        return;
       }
 
       if (
@@ -461,9 +471,17 @@ export function setupAnime4K(
     };
 
     ensureContextAndRender();
+
+    video.addEventListener("loadedmetadata", ensureContextAndRender, {
+      signal,
+    });
+    video.addEventListener("loadeddata", ensureContextAndRender, { signal });
+    video.addEventListener("seeked", ensureContextAndRender, { signal });
   };
 
-  const cleanup = () => {
+  const cleanup = (): void => {
+    abortController.abort();
+
     if (timerId != null) {
       video.cancelVideoFrameCallback(timerId);
       timerId = null;

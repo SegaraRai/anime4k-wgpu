@@ -1,2 +1,3 @@
 [default]
+extend-words = { "seeked" = "seeked" }
 extend-identifiers = { "textureLod" = "textureLod", "lod_min_clamp" = "lod_min_clamp", "lod_max_clamp" = "lod_max_clamp" }

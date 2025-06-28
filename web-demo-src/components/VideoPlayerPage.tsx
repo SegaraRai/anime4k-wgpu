@@ -1,9 +1,8 @@
-import { useRef, useState } from "preact/hooks";
+import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import type { Anime4KConfig } from "../anime4k/player";
 import {
-  COMPARE_MODES,
-  DEFAULT_CONFIG,
   DEFAULT_COMPARE,
+  DEFAULT_CONFIG,
   MAX_SCALE_FACTOR,
   MIN_SCALE_FACTOR,
   PERFORMANCE_PRESETS,
@@ -14,24 +13,108 @@ import { VideoPlayer } from "./VideoPlayer";
 
 export function VideoPlayerPage() {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
-  const [config, setConfig] = useState<Anime4KConfig | null>(DEFAULT_CONFIG);
+  const [enabled, setEnabled] = useState<boolean>(true);
+  const [config, setConfig] = useState<Anime4KConfig>(DEFAULT_CONFIG);
   const [compare, setCompare] = useState<CompareConfig>(DEFAULT_COMPARE);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (event: Event) => {
+  const currentURL = useRef<string | null>(null);
+  const revokeCurrentURL = useCallback(() => {
+    if (currentURL.current) {
+      URL.revokeObjectURL(currentURL.current);
+      currentURL.current = null;
+    }
+  }, []);
+  const updateFile = useCallback(
+    (blob: Blob) => {
+      revokeCurrentURL();
+      const url = URL.createObjectURL(blob);
+      currentURL.current = url;
+      setSelectedFile(url);
+    },
+    [revokeCurrentURL]
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    window.addEventListener("beforeunload", revokeCurrentURL, { signal });
+
+    return () => {
+      controller.abort();
+
+      revokeCurrentURL();
+    };
+  }, [revokeCurrentURL]);
+
+  const handleFileChange = useCallback((event: Event) => {
     const target = event.target as HTMLInputElement;
     const file = target.files?.[0];
 
     if (file) {
-      const url = URL.createObjectURL(file);
-      setSelectedFile(url);
+      updateFile(file);
     }
-  };
+  }, []);
 
-  const handleFileClick = () => {
+  const handleFileClick = useCallback(() => {
     fileInputRef.current?.click();
-  };
+  }, []);
+
+  const handleDragOver = useCallback((event: DragEvent) => {
+    event.preventDefault();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((event: DragEvent) => {
+    event.preventDefault();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback((event: DragEvent) => {
+    event.preventDefault();
+    setIsDragOver(false);
+
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.type.startsWith("video/")) {
+        updateFile(file);
+      }
+    }
+  }, []);
+
+  const handleUpdateConfig = useCallback((newConfig: Anime4KConfig | null) => {
+    if (newConfig) {
+      setEnabled(true);
+      setConfig(newConfig);
+    } else {
+      setEnabled(false);
+    }
+  }, []);
+
+  const onLoadedMetadata = useCallback((event: Event) => {
+    // Update the scale factor based on the video dimensions and the current viewport size in physical pixels
+    const video = event.target as HTMLVideoElement;
+    const { videoWidth, videoHeight } = video;
+    const viewportWidth = document.body.clientWidth * window.devicePixelRatio;
+    const viewportHeight = document.body.clientHeight * window.devicePixelRatio;
+    const scaleFactor = Math.max(
+      Math.min(
+        Math.ceil(
+          Math.max(viewportWidth / videoWidth, viewportHeight / videoHeight)
+        ),
+        MAX_SCALE_FACTOR
+      ),
+      MIN_SCALE_FACTOR
+    );
+    setConfig((prevConfig) => ({
+      ...prevConfig,
+      scale: scaleFactor,
+    }));
+  }, []);
 
   return (
     <div class="bg-gradient-to-b from-base-200 to-base-400">
@@ -41,27 +124,55 @@ export function VideoPlayerPage() {
           <div class="max-w-4xl space-y-8">
             {/* Title and Description */}
             <div class="space-y-4">
-              <h1 class="text-5xl font-bold">Anime4K-wgpu Web Demo</h1>
-              <p class="text-xl max-w-2xl mx-auto">
-                Real-time anime upscaling powered by WebGPU. Upload a video file
-                and experience high-quality AI upscaling directly in your
-                browser.
+              <h1 class="text-5xl font-bold py-2">Anime4K-wgpu Web Demo</h1>
+              <p class="text-xl max-w-2xl mx-auto py-2">
+                A WebGPU port of the renowned{" "}
+                <a
+                  href="https://github.com/bloc97/Anime4K"
+                  class="link link-primary"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Anime4K
+                </a>{" "}
+                upscaling algorithm. Upload a video file and experience
+                high-quality AI upscaling directly in your browser.
+              </p>
+              <p class="text-sm opacity-80">
+                View the source code on{" "}
+                <a
+                  href="https://github.com/SegaraRai/anime4k-wgpu"
+                  class="link link-primary"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  GitHub
+                </a>
               </p>
             </div>
 
             {/* File Input */}
             <div class="space-y-6">
-              <div class="flex flex-col items-center space-y-4">
+              <label
+                class={`flex flex-col items-center space-y-4 p-8 border-2 border-dashed rounded-lg transition-all duration-200 ${
+                  isDragOver
+                    ? "border-primary bg-primary/10 scale-105"
+                    : "border-transparent"
+                }`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
                 <input
                   ref={fileInputRef}
                   type="file"
                   accept="video/*"
                   onChange={handleFileChange}
-                  class="hidden"
+                  hidden
                 />
                 <button
-                  onClick={handleFileClick}
                   class="btn btn-primary btn-lg gap-3"
+                  onClick={handleFileClick}
                 >
                   <svg
                     class="w-6 h-6"
@@ -78,10 +189,12 @@ export function VideoPlayerPage() {
                   </svg>
                   Choose Video File
                 </button>
-                {selectedFile && (
-                  <p class="text-sm opacity-70">Video file selected</p>
-                )}
-              </div>
+                <p class="text-sm opacity-70 text-center">
+                  {selectedFile
+                    ? "Video file selected"
+                    : "Drag and drop a video file here, or click to browse"}
+                </p>
+              </label>
             </div>
 
             {/* Anime4K Config Box */}
@@ -95,13 +208,9 @@ export function VideoPlayerPage() {
                     <input
                       type="checkbox"
                       class="toggle toggle-primary"
-                      checked={config !== null}
+                      checked={enabled}
                       onChange={(event) => {
-                        if (event.currentTarget.checked) {
-                          setConfig(DEFAULT_CONFIG);
-                        } else {
-                          setConfig(null);
-                        }
+                        setEnabled(event.currentTarget.checked);
                       }}
                     />
                     <span class="label-text text-lg font-medium">
@@ -112,7 +221,7 @@ export function VideoPlayerPage() {
 
                 {/* Anime4K Settings */}
                 <div
-                  class={`mb-6 ${!config ? "opacity-50 pointer-events-none" : ""}`}
+                  class={`mb-6 ${!enabled ? "opacity-50 pointer-events-none" : ""}`}
                 >
                   <h4 class="text-lg font-medium mb-3">Anime4K Settings</h4>
                   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -121,10 +230,9 @@ export function VideoPlayerPage() {
                       <legend class="fieldset-legend">Preset</legend>
                       <select
                         class="w-full select select-bordered"
-                        value={config?.preset ?? ""}
-                        disabled={!config}
+                        value={config.preset}
+                        disabled={!enabled}
                         onChange={(e) => {
-                          if (!config) return;
                           setConfig({
                             ...config,
                             preset: (e.target as HTMLSelectElement)
@@ -145,10 +253,9 @@ export function VideoPlayerPage() {
                       <legend class="fieldset-legend">Performance</legend>
                       <select
                         class="w-full select select-bordered"
-                        value={config?.performance ?? ""}
-                        disabled={!config}
+                        value={config.performance}
+                        disabled={!enabled}
                         onInput={(e) => {
-                          if (!config) return;
                           setConfig({
                             ...config,
                             performance: (e.target as HTMLSelectElement)
@@ -167,18 +274,17 @@ export function VideoPlayerPage() {
                     {/* Scale Selection */}
                     <fieldset class="fieldset">
                       <legend class="fieldset-legend">
-                        Scale Factor: {config?.scale ?? MIN_SCALE_FACTOR}x
+                        Scale Factor: {config.scale}x
                       </legend>
                       <input
                         type="range"
                         min={MIN_SCALE_FACTOR}
                         max={MAX_SCALE_FACTOR}
                         step="1"
-                        value={config?.scale ?? MIN_SCALE_FACTOR}
-                        disabled={!config}
+                        value={config.scale}
+                        disabled={!enabled}
                         class="w-full range range-primary"
                         onInput={(e) => {
-                          if (!config) return;
                           setConfig({
                             ...config,
                             scale: parseFloat(
@@ -194,61 +300,6 @@ export function VideoPlayerPage() {
                             <span key={i}>{i + MIN_SCALE_FACTOR}</span>
                           )
                         )}
-                      </div>
-                    </fieldset>
-                  </div>
-                </div>
-
-                {/* Compare Settings */}
-                <div class="mb-6">
-                  <h4 class="text-lg font-medium mb-3">Comparison Mode</h4>
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Compare Mode Selection */}
-                    <fieldset class="fieldset">
-                      <legend class="fieldset-legend">Mode</legend>
-                      <select
-                        class="w-full select select-bordered"
-                        value={compare.mode}
-                        onInput={(e) =>
-                          setCompare({
-                            ...compare,
-                            mode: (e.target as HTMLSelectElement)
-                              .value as CompareConfig["mode"],
-                          })
-                        }
-                      >
-                        {COMPARE_MODES.map(({ value, label }) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                    </fieldset>
-
-                    {/* Compare Ratio */}
-                    <fieldset class="fieldset">
-                      <legend class="fieldset-legend">
-                        Ratio: {Math.round(compare.ratio * 100)}%
-                      </legend>
-                      <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.01"
-                        value={compare.ratio}
-                        class="w-full range range-primary"
-                        onInput={(e) =>
-                          setCompare({
-                            ...compare,
-                            ratio: parseFloat(
-                              (e.target as HTMLInputElement).value
-                            ),
-                          })
-                        }
-                      />
-                      <div class="flex justify-between text-xs opacity-60 px-2 mt-1">
-                        <span>0%</span>
-                        <span>100%</span>
                       </div>
                     </fieldset>
                   </div>
@@ -274,6 +325,73 @@ export function VideoPlayerPage() {
                         Anime4K is <strong>disabled.</strong>
                       </>
                     )}
+                  </div>
+                </div>
+
+                {/* Keyboard Shortcuts */}
+                <div class="mt-6">
+                  <h4 class="text-lg font-medium mb-3">Keyboard Shortcuts</h4>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Video Controls */}
+                    <div class="card bg-base-200/50 p-4">
+                      <h5 class="font-medium mb-2">Video Controls</h5>
+                      <div class="space-y-1 text-sm">
+                        <div class="flex justify-between">
+                          <kbd class="kbd kbd-xs">Space</kbd>
+                          <span>Play/Pause</span>
+                        </div>
+                        <div class="flex justify-between">
+                          <kbd class="kbd kbd-xs">Enter</kbd>
+                          <span>Play/Pause</span>
+                        </div>
+                        <div class="flex justify-between">
+                          <kbd class="kbd kbd-xs">F</kbd>
+                          <span>Toggle Fullscreen</span>
+                        </div>
+                        <div class="flex justify-between">
+                          <kbd class="kbd kbd-xs">C</kbd>
+                          <span>Next Compare Mode</span>
+                        </div>
+                        <div class="flex justify-between">
+                          <span class="space-x-1">
+                            <kbd class="kbd kbd-xs">Shift</kbd>
+                            <kbd class="kbd kbd-xs">C</kbd>
+                          </span>
+                          <span>Previous Compare Mode</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Anime4K Controls */}
+                    <div class="card bg-base-200/50 p-4">
+                      <h5 class="font-medium mb-2">Anime4K Controls</h5>
+                      <div class="space-y-1 text-sm">
+                        <div class="flex justify-between">
+                          <span class="space-x-1">
+                            <kbd class="kbd kbd-xs">Ctrl</kbd>
+                            <kbd class="kbd kbd-xs">0</kbd>
+                          </span>
+                          <span>Disable Anime4K</span>
+                        </div>
+                        <div class="flex justify-between">
+                          <span class="space-x-1">
+                            <kbd class="kbd kbd-xs">Ctrl</kbd>
+                            <kbd class="kbd kbd-xs">1-6</kbd>
+                          </span>
+                          <span>Set Preset (A, B, C, AA, BB, CA)</span>
+                        </div>
+                        <div class="flex justify-between">
+                          <span class="space-x-1">
+                            <kbd class="kbd kbd-xs">Shift</kbd>
+                            <kbd class="kbd kbd-xs">1-5</kbd>
+                          </span>
+                          <span>Set Performance (Light to Extreme)</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="text-xs opacity-70 mt-2 text-center">
+                    Keyboard shortcuts work when the video player is focused
                   </div>
                 </div>
 
@@ -309,10 +427,11 @@ export function VideoPlayerPage() {
         <div class="snap-start h-screen">
           <VideoPlayer
             src={selectedFile}
-            config={config}
+            config={enabled ? config : null}
             compare={compare}
-            onUpdateConfig={setConfig}
+            onUpdateConfig={handleUpdateConfig}
             onUpdateCompare={setCompare}
+            onLoadedMetadata={onLoadedMetadata}
           />
         </div>
       )}

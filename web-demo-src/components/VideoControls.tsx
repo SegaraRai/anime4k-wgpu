@@ -36,6 +36,10 @@ function formatTime(
   return [format(current), format(duration)];
 }
 
+function nanToNull(value: number | null): number | null {
+  return value == null || isNaN(value) ? null : value;
+}
+
 function Slider({
   current,
   seeking,
@@ -138,6 +142,19 @@ function Slider({
   );
 }
 
+function calcRatio(
+  mode: "left" | "right" | "top" | "bottom",
+  rect: DOMRect,
+  event: MouseEvent
+): number {
+  const position =
+    mode === "left" || mode === "right"
+      ? (event.clientX - rect.left) / rect.width
+      : (event.clientY - rect.top) / rect.height;
+  const ratio = mode === "left" || mode === "top" ? position : 1 - position;
+  return Math.max(0, Math.min(ratio, 1));
+}
+
 export function CompareController({
   value: { mode, ratio },
   onChange,
@@ -148,19 +165,6 @@ export function CompareController({
   const containerRef = useRef<HTMLDivElement>(null);
   const [draggingRatio, setDraggingRatio] = useState<number | null>(null);
   const [containerRect, setSliderRect] = useState<DOMRect | null>(null);
-
-  const calcRatio = (
-    mode: "left" | "right" | "top" | "bottom",
-    rect: DOMRect,
-    event: MouseEvent
-  ): number => {
-    const position =
-      mode === "left" || mode === "right"
-        ? (event.clientX - rect.left) / rect.width
-        : (event.clientY - rect.top) / rect.height;
-    const ratio = mode === "left" || mode === "top" ? position : 1 - position;
-    return Math.max(0, Math.min(ratio, 1));
-  };
 
   useEffect(() => {
     if (draggingRatio == null || containerRect == null) {
@@ -304,13 +308,6 @@ export function VideoControls({
   const [lastConfig, setLastConfig] = useState<Anime4KConfig | null>(null);
   const displayConfig = config ?? lastConfig ?? DEFAULT_CONFIG;
 
-  const updateConfig = (newConfig: Anime4KConfig | null): void => {
-    if (newConfig) {
-      setLastConfig(newConfig);
-    }
-    onUpdateConfig(newConfig);
-  };
-
   if (
     config &&
     (config.preset !== displayConfig.preset ||
@@ -319,6 +316,16 @@ export function VideoControls({
   ) {
     setLastConfig(config);
   }
+
+  const updateConfig = useCallback(
+    (newConfig: Anime4KConfig | null): void => {
+      if (newConfig) {
+        setLastConfig(newConfig);
+      }
+      onUpdateConfig(newConfig);
+    },
+    [onUpdateConfig]
+  );
 
   const [isLoading, setIsLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -335,9 +342,9 @@ export function VideoControls({
 
     const update = (): void => {
       setIsLoading(video.readyState < 2);
-      setCurrentTime(video.currentTime);
-      setDuration(video.duration);
-      setVolume(video.volume);
+      setCurrentTime(nanToNull(video.currentTime));
+      setDuration(nanToNull(video.duration));
+      setVolume(nanToNull(video.volume));
       setIsMuted(video.muted);
       setIsPlaying(!video.paused);
       setBuffered(
@@ -410,8 +417,10 @@ export function VideoControls({
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent): void => {
-      switch (event.key) {
-        case "Enter":
+      const key =
+        /^digit(\d)$/.exec(event.code)?.[1] ?? event.key.toLowerCase();
+      switch (key) {
+        case "enter":
         case " ":
           event.preventDefault();
           togglePlayPause();
@@ -424,16 +433,68 @@ export function VideoControls({
 
         case "c":
           event.preventDefault();
-          toggleCompare(false);
+          toggleCompare(event.shiftKey);
           break;
 
-        case "C":
-          event.preventDefault();
-          toggleCompare(true);
+        case "0":
+          if (
+            event.ctrlKey &&
+            !event.shiftKey &&
+            !event.altKey &&
+            !event.metaKey
+          ) {
+            event.preventDefault();
+            updateConfig(null); // Disable Anime4K
+          }
+          break;
+
+        case "1":
+        case "2":
+        case "3":
+        case "4":
+        case "5":
+        case "6":
+          if (
+            event.ctrlKey &&
+            !event.shiftKey &&
+            !event.altKey &&
+            !event.metaKey
+          ) {
+            event.preventDefault();
+            const presetIndex = parseInt(event.key) - 1;
+            if (presetIndex < PRESETS.length) {
+              const preset = PRESETS[presetIndex].value;
+              updateConfig({
+                ...displayConfig,
+                preset,
+              });
+            }
+          } else if (
+            event.shiftKey &&
+            !event.ctrlKey &&
+            !event.altKey &&
+            !event.metaKey
+          ) {
+            event.preventDefault();
+            const perfIndex = parseInt(event.key) - 1;
+            if (perfIndex < PERFORMANCE_PRESETS.length) {
+              const performance = PERFORMANCE_PRESETS[perfIndex].value;
+              updateConfig({
+                ...displayConfig,
+                performance,
+              });
+            }
+          }
           break;
       }
     },
-    [togglePlayPause, toggleFullscreen, toggleCompare]
+    [
+      togglePlayPause,
+      toggleFullscreen,
+      toggleCompare,
+      updateConfig,
+      displayConfig,
+    ]
   );
 
   const setCompareMode = useCallback(
@@ -453,7 +514,7 @@ export function VideoControls({
 
   return (
     <div
-      class="absolute inset-0 flex flex-col justify-end group select-none touch-manipulation"
+      class="absolute inset-0 flex flex-col justify-end group select-none touch-manipulation focus:!outline-none"
       data-show-controls={!isPlaying ? 1 : undefined}
       onKeyDown={handleKeyDown}
       tabIndex={0}
@@ -470,7 +531,7 @@ export function VideoControls({
         {/* Compare Controller */}
         <CompareController value={compare} onChange={onUpdateCompare} />
         {/* Video Controller */}
-        <div class="pointer-events-none relative bg-gradient-to-t from-[#000000f4] from-15% via-[#000000a0] via-50% opacity-0 group-hover:opacity-100 group-[[data-show-controls]]:opacity-100 has-[.dropdown:focus-within]:opacity-100 transition-opacity duration-400 w-full h-40">
+        <div class="pointer-events-none relative bg-gradient-to-t from-[#000000f4] from-10% via-[#000000a0] via-50% opacity-0 group-hover:opacity-100 group-[[data-show-controls]]:opacity-100 has-[.dropdown:focus-within]:opacity-100 transition-opacity duration-400 w-full h-40">
           <div class="pointer-events-auto absolute inset-[auto_0_0_0] flex flex-col justify-between p-4">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-4">
@@ -682,7 +743,7 @@ export function VideoControls({
               </div>
             </div>
             {/* Playback progress */}
-            <div class="px-2">
+            <div class="px-2 pb-2">
               <Slider
                 current={currentTime}
                 seeking={seekingTime}
