@@ -59,9 +59,78 @@ function createContextInit(device: GPUDevice): RenderingContextInit {
       @group(0) @binding(0) var inputTexture: texture_2d<f32>;
       @group(0) @binding(1) var inputSampler: sampler;
 
+      // Convert from TV range (16-235) to full range (0-255) for luma
+      // and (16-240) to full range for chroma
+      fn tvRangeToFullRange(color: vec3<f32>) -> vec3<f32> {
+        // For RGB that was converted from YUV with TV range
+        // Expand the limited range to full range
+        let expanded = (color - vec3<f32>(16.0/255.0)) / ((235.0 - 16.0) / 255.0);
+        return clamp(expanded, vec3<f32>(0.0), vec3<f32>(1.0));
+      }
+
+      // Rec.709 gamma correction (similar to sRGB but slightly different)
+      fn rec709ToLinear(color: vec3<f32>) -> vec3<f32> {
+        let alpha = 1.09929682680944;
+        let beta = 0.018053968510807;
+        return select(
+          pow((color + alpha - 1.0) / alpha, vec3<f32>(1.0 / 0.45)),
+          color / 4.5,
+          color < vec3<f32>(beta)
+        );
+      }
+
+      fn linearToRec709(linear: vec3<f32>) -> vec3<f32> {
+        let alpha = 1.09929682680944;
+        let beta = 0.018053968510807;
+        return select(
+          alpha * pow(linear, vec3<f32>(0.45)) - (alpha - 1.0),
+          4.5 * linear,
+          linear < vec3<f32>(beta / 4.5)
+        );
+      }
+
+      // Convert from sRGB gamma for display
+      fn linearToSrgb(linear: vec3<f32>) -> vec3<f32> {
+        return select(
+          pow(linear, vec3<f32>(1.0 / 2.4)) * 1.055 - 0.055,
+          linear * 12.92,
+          linear <= vec3<f32>(0.0031308)
+        );
+      }
+
       @fragment
       fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
-        return textureSampleLevel(inputTexture, inputSampler, input.texCoord, 0.0);
+        let rawColor = textureSampleLevel(inputTexture, inputSampler, input.texCoord, 0.0);
+
+        // Toggle between different color handling approaches
+        // Approach 1: Direct passthrough (original behavior)
+        // let finalColor = rawColor.rgb;
+
+        // Approach 2: TV range expansion only
+        // let finalColor = tvRangeToFullRange(rawColor.rgb);
+
+        // Approach 3: Full Rec.709 to sRGB conversion
+        // let fullRangeColor = tvRangeToFullRange(rawColor.rgb);
+        // let linearColor = rec709ToLinear(fullRangeColor);
+        // let finalColor = linearToSrgb(linearColor);
+
+        // Alternative approaches to test - comment/uncomment different approaches:
+        //
+        // APPROACH 1: Direct passthrough (for comparison)
+        // Replace the finalColor line with: let finalColor = rawColor.rgb;
+        //
+        // APPROACH 2: Simple TV range expansion (most likely fix)
+        // Replace the finalColor lines with:
+        // let finalColor = tvRangeToFullRange(rawColor.rgb);
+        //
+        // APPROACH 3: Full color space conversion (current implementation)
+        // Keep the current implementation
+        //
+        // APPROACH 4: Gamma-only correction (if TV range is not the issue)
+        // Replace the finalColor lines with:
+        let finalColor = linearToSrgb(rec709ToLinear(rawColor.rgb));
+
+        return vec4<f32>(finalColor, 1.0);
       }
     `,
   });
@@ -126,12 +195,15 @@ async function createContext(
   canvasContext.configure({
     device,
     format: navigator.gpu.getPreferredCanvasFormat(),
+    // Remove explicit colorSpace to let browser handle it naturally
+    alphaMode: "opaque",
+    colorSpace: "display-p3",
   });
 
   // Create a new texture for the latest frame (input to Anime4K)
   const latestFrame = device.createTexture({
     size: [video.videoWidth, video.videoHeight],
-    format: "rgba8unorm",
+    format: "rgba8unorm", // Keep unorm for Anime4K compatibility
     usage:
       GPUTextureUsage.COPY_DST |
       GPUTextureUsage.STORAGE_BINDING |
@@ -233,9 +305,15 @@ function render({
   renderBindGroup,
 }: RenderingContext): void {
   // Copy the external texture to the latestFrame
+  // Preserve original color space and range
   device.queue.copyExternalImageToTexture(
-    { source: video },
-    { texture: latestFrame },
+    {
+      source: video,
+    },
+    {
+      texture: latestFrame,
+      premultipliedAlpha: false,
+    },
     [video.videoWidth, video.videoHeight]
   );
 
