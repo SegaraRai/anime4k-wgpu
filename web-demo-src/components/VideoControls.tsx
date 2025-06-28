@@ -13,6 +13,8 @@ import {
   PRESETS,
   type CompareConfig,
 } from "./constants";
+import { Toast } from "./Toast";
+import { useToast } from "./useToast";
 
 function formatTime(
   current: number | null,
@@ -305,6 +307,8 @@ export function VideoControls({
   readonly onUpdateCompare: (compare: CompareConfig) => void;
   readonly onFullscreen: () => void;
 }) {
+  const toast = useToast();
+
   const [lastConfig, setLastConfig] = useState<Anime4KConfig | null>(null);
   const displayConfig = config ?? lastConfig ?? DEFAULT_CONFIG;
 
@@ -323,8 +327,24 @@ export function VideoControls({
         setLastConfig(newConfig);
       }
       onUpdateConfig(newConfig);
+
+      // Show toast notification
+      let message: string;
+      if (newConfig === null) {
+        message = "Anime4K disabled";
+      } else {
+        const presetLabel =
+          PRESETS.find((p) => p.value === newConfig.preset)?.label ??
+          newConfig.preset;
+        const performanceLabel =
+          PERFORMANCE_PRESETS.find((p) => p.value === newConfig.performance)
+            ?.label ?? newConfig.performance;
+        message = `Anime4K enabled (${newConfig.scale}x) · ${presetLabel} · ${performanceLabel}`;
+      }
+
+      toast.showToast(message);
     },
-    [onUpdateConfig]
+    [onUpdateConfig, toast]
   );
 
   const [isLoading, setIsLoading] = useState(true);
@@ -418,7 +438,7 @@ export function VideoControls({
   const handleKeyDown = useCallback(
     (event: KeyboardEvent): void => {
       const key =
-        /^digit(\d)$/.exec(event.code)?.[1] ?? event.key.toLowerCase();
+        /^digit(\d)$/i.exec(event.code)?.[1] ?? event.key.toLowerCase();
       switch (key) {
         case "enter":
         case " ":
@@ -461,7 +481,7 @@ export function VideoControls({
             !event.metaKey
           ) {
             event.preventDefault();
-            const presetIndex = parseInt(event.key) - 1;
+            const presetIndex = parseInt(key) - 1;
             if (presetIndex < PRESETS.length) {
               const preset = PRESETS[presetIndex].value;
               updateConfig({
@@ -476,7 +496,7 @@ export function VideoControls({
             !event.metaKey
           ) {
             event.preventDefault();
-            const perfIndex = parseInt(event.key) - 1;
+            const perfIndex = parseInt(key) - 1;
             if (perfIndex < PERFORMANCE_PRESETS.length) {
               const performance = PERFORMANCE_PRESETS[perfIndex].value;
               updateConfig({
@@ -530,6 +550,14 @@ export function VideoControls({
       >
         {/* Compare Controller */}
         <CompareController value={compare} onChange={onUpdateCompare} />
+
+        {/* Toast Notification */}
+        <Toast
+          class="alert-info alert-soft [--color-base-100:var(--color-base-200)]/80"
+          message={toast.message}
+          isVisible={toast.isVisible}
+        />
+
         {/* Video Controller */}
         <div class="pointer-events-none relative bg-gradient-to-t from-[#000000f4] from-10% via-[#000000a0] via-50% opacity-0 group-hover:opacity-100 group-[[data-show-controls]]:opacity-100 has-[.dropdown:focus-within]:opacity-100 transition-opacity duration-400 w-full h-40">
           <div class="pointer-events-auto absolute inset-[auto_0_0_0] flex flex-col justify-between p-4">

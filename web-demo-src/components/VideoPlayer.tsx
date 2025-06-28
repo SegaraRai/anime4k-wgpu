@@ -102,7 +102,7 @@ export function VideoPlayer({
   }[compare.mode];
 
   return (
-    <div ref={containerRef} class="relative w-full h-full">
+    <div ref={containerRef} class="relative w-full h-full overflow-clip">
       <video
         ref={videoRefCallback}
         class="w-full h-full object-contain"

@@ -119,13 +119,13 @@ export function VideoPlayerPage() {
   return (
     <div class="bg-gradient-to-b from-base-200 to-base-400">
       {/* Header Section */}
-      <div class="snap-start min-h-screen hero">
-        <div class="hero-content text-center">
-          <div class="max-w-4xl space-y-8">
+      <div class="snap-start min-h-screen hero w-full max-w-6xl mx-auto">
+        <div class="hero-content text-center w-full">
+          <div class="space-y-8 flex-grow">
             {/* Title and Description */}
-            <div class="space-y-4">
-              <h1 class="text-5xl font-bold py-2">Anime4K-wgpu Web Demo</h1>
-              <p class="text-xl max-w-2xl mx-auto py-2">
+            <div class="space-y-6">
+              <h1 class="text-5xl font-bold pb-4">Anime4K-wgpu Web Demo</h1>
+              <p class="text-xl max-w-2xl mx-auto">
                 A WebGPU port of the renowned{" "}
                 <a
                   href="https://github.com/bloc97/Anime4K"
@@ -152,53 +152,51 @@ export function VideoPlayerPage() {
             </div>
 
             {/* File Input */}
-            <div class="space-y-6">
-              <label
-                class={`flex flex-col items-center space-y-4 p-8 border-2 border-dashed rounded-lg transition-all duration-200 ${
-                  isDragOver
-                    ? "border-primary bg-primary/10 scale-105"
-                    : "border-transparent"
-                }`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
+            <label
+              class={`flex flex-col items-center space-y-4 p-8 border-2 border-dashed rounded-lg transition-all duration-200 ${
+                isDragOver
+                  ? "border-primary bg-primary/10 scale-105"
+                  : "border-transparent"
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="video/*"
+                onChange={handleFileChange}
+                hidden
+              />
+              <button
+                class="btn btn-primary btn-lg gap-3"
+                onClick={handleFileClick}
               >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="video/*"
-                  onChange={handleFileChange}
-                  hidden
-                />
-                <button
-                  class="btn btn-primary btn-lg gap-3"
-                  onClick={handleFileClick}
+                <svg
+                  class="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  <svg
-                    class="w-6 h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                    />
-                  </svg>
-                  Choose Video File
-                </button>
-                <p class="text-sm opacity-70 text-center">
-                  {selectedFile
-                    ? "Video file selected"
-                    : "Drag and drop a video file here, or click to browse"}
-                </p>
-              </label>
-            </div>
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                  />
+                </svg>
+                Choose Video File
+              </button>
+              <p class="text-sm opacity-70 text-center">
+                {selectedFile
+                  ? "Video file selected"
+                  : "Drag and drop a video file here, or click to browse"}
+              </p>
+            </label>
 
             {/* Anime4K Config Box */}
-            <div class="card bg-base-100 shadow-xl max-w-4xl mx-auto">
+            <div class="card bg-base-100 shadow-xl">
               <div class="card-body">
                 <h3 class="card-title text-lg mb-4">Configuration</h3>
 
@@ -301,6 +299,33 @@ export function VideoPlayerPage() {
                           )
                         )}
                       </div>
+
+                      {/* Power-of-2 Upscaling Explanation */}
+                      <div class="mt-2 p-2 bg-base-200 rounded text-xs">
+                        <div class="font-medium text-primary mb-1">
+                          Internal Processing:
+                        </div>
+                        <div class="text-xs opacity-80">
+                          {(() => {
+                            const targetScale = config.scale;
+                            const passes = Math.max(
+                              1,
+                              Math.ceil(Math.log2(targetScale))
+                            );
+                            const actualScale = Math.pow(2, passes);
+                            const passesText =
+                              passes === 1 ? "1 pass" : `${passes} passes`;
+
+                            if (targetScale === 1) {
+                              return `1 pass of 2x upscaling (minimum required)`;
+                            } else if (actualScale === targetScale) {
+                              return `${passesText} of 2x upscaling → ${actualScale}x total`;
+                            } else {
+                              return `${passesText} of 2x upscaling → ${actualScale}x (exceeds ${targetScale}x)`;
+                            }
+                          })()}
+                        </div>
+                      </div>
                     </fieldset>
                   </div>
                 </div>
@@ -308,7 +333,7 @@ export function VideoPlayerPage() {
                 {/* Config Summary */}
                 <div class="alert alert-info alert-soft">
                   <div class="text-sm">
-                    {config ? (
+                    {enabled ? (
                       <>
                         <strong>Current settings:</strong>{" "}
                         {PRESETS.find((p) => p.value === config.preset)?.label}{" "}
@@ -319,10 +344,25 @@ export function VideoPlayerPage() {
                           )?.label
                         }{" "}
                         performance, {config.scale}x scale
+                        {(() => {
+                          const targetScale = config.scale;
+                          const passes = Math.max(
+                            1,
+                            Math.ceil(Math.log2(targetScale))
+                          );
+                          const actualScale = Math.pow(2, passes);
+
+                          if (targetScale === 1) {
+                            return ` (processed at 2x internally, then downscaled)`;
+                          } else if (actualScale !== targetScale) {
+                            return ` (processed at ${actualScale}x internally)`;
+                          }
+                          return "";
+                        })()}
                       </>
                     ) : (
                       <>
-                        Anime4K is <strong>disabled.</strong>
+                        Anime4K is <strong>disabled</strong>
                       </>
                     )}
                   </div>
