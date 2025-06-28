@@ -1,0 +1,4 @@
+@plugin "@iconify/tailwind4";
+@plugin "daisyui";
+
+@import "tailwindcss";

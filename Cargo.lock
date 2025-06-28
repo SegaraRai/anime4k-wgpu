@@ -111,7 +111,6 @@ dependencies = [
  "clap",
  "futures-intrusive",
  "image",
- "naga 24.0.0",
  "pollster",
  "regex",
  "tokio",
@@ -119,7 +118,6 @@ dependencies = [
  "tracing-subscriber",
  "vk-video",
  "wgpu",
- "wgsl-minifier",
  "winit",
 ]
 
@@ -129,12 +127,15 @@ version = "1.0.0"
 dependencies = [
  "futures-intrusive",
  "image",
+ "naga 24.0.0",
  "pollster",
  "regex",
  "serde",
+ "serde_json",
  "serde_norway",
  "tokio",
  "wgpu",
+ "wgsl-minifier",
 ]
 
 [[package]]
@@ -560,16 +561,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "console_error_panic_hook"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a06aeb73f470f66dcdbf7223caeebb85984942f22f1adb2a088cf9668146bbbc"
-dependencies = [
- "cfg-if",
- "wasm-bindgen",
-]
-
-[[package]]
 name = "core-foundation"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -654,24 +645,6 @@ name = "cursor-icon"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f27ae1dd37df86211c42e150270f82743308803d90a6f6e6651cd730d5e1732f"
-
-[[package]]
-name = "demo-web"
-version = "0.1.0"
-dependencies = [
- "anime4k-wgpu",
- "bytemuck",
- "console_error_panic_hook",
- "futures-intrusive",
- "image",
- "js-sys",
- "tracing",
- "tracing-wasm",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
- "wgpu",
-]
 
 [[package]]
 name = "derivative"
@@ -2315,6 +2288,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_json"
+version = "1.0.140"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20068b6e96dc6c9bd23e01df8827e6c7e1f2fddd43c21810382803c136b99373"
+dependencies = [
+ "itoa",
+ "memchr",
+ "ryu",
+ "serde",
+]
+
+[[package]]
 name = "serde_norway"
 version = "0.9.42"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2719,17 +2704,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tracing-wasm"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4575c663a174420fa2d78f4108ff68f65bf2fbb7dd89f33749b6e826b3626e07"
-dependencies = [
- "tracing",
- "tracing-subscriber",
- "wasm-bindgen",
-]
-
-[[package]]
 name = "ttf-parser"
 version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3119,7 +3093,6 @@ dependencies = [
  "thiserror 2.0.12",
  "wgpu-core-deps-apple",
  "wgpu-core-deps-emscripten",
- "wgpu-core-deps-wasm",
  "wgpu-core-deps-windows-linux-android",
  "wgpu-hal",
  "wgpu-types",
@@ -3139,15 +3112,6 @@ name = "wgpu-core-deps-emscripten"
 version = "25.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f09ad7aceb3818e52539acc679f049d3475775586f3f4e311c30165cf2c00445"
-dependencies = [
- "wgpu-hal",
-]
-
-[[package]]
-name = "wgpu-core-deps-wasm"
-version = "25.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eca8809ad123f6c7f2c5e01a2c7117c4fdfd02f70bd422ee2533f69dfa98756c"
 dependencies = [
  "wgpu-hal",
 ]

@@ -1,0 +1,8 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { VideoPlayer } from "../components/VideoPlayer.tsx";
+---
+
+<Layout>
+  <VideoPlayer src="/test.mp4" client:load />
+</Layout>

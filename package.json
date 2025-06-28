@@ -1,0 +1,27 @@
+{
+  "name": "anime4k-wgpu-web-demo",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "packageManager": "pnpm@10.12.3",
+  "devDependencies": {
+    "@astrojs/preact": "^4.1.0",
+    "@iconify-json/akar-icons": "^1.2.2",
+    "@iconify/tailwind4": "^1.0.6",
+    "@tailwindcss/vite": "^4.1.11",
+    "@webgpu/types": "^0.1.62",
+    "astro": "^5.10.1",
+    "daisyui": "^5.0.43",
+    "prettier": "^3.6.1",
+    "tailwindcss": "^4.1.11",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "preact": "^10.26.9"
+  }
+}

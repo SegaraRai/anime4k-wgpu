@@ -4,6 +4,7 @@
 //! descriptions, optimizing memory usage through texture reuse when lifetimes don't overlap.
 
 use super::ScaleFactor;
+use serde::Serialize;
 use std::collections::HashMap;
 
 /// Represents the lifetime of a logical texture in the pipeline
@@ -22,7 +23,7 @@ pub struct TextureLifetime {
 }
 
 /// A physical texture that will be allocated in the GPU
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct PhysicalTexture {
     pub id: u32,
     pub components: u32,
