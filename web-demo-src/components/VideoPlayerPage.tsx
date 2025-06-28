@@ -173,20 +173,8 @@ export function VideoPlayerPage() {
                 class="btn btn-primary btn-lg gap-3"
                 onClick={handleFileClick}
               >
-                <svg
-                  class="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                  />
-                </svg>
-                Choose Video File
+                <span class="icon-[akar-icons--video] size-6" />
+                <span>Choose Video File</span>
               </button>
               <p class="text-sm opacity-70 text-center">
                 {selectedFile
@@ -211,7 +199,7 @@ export function VideoPlayerPage() {
                         setEnabled(event.currentTarget.checked);
                       }}
                     />
-                    <span class="label-text text-lg font-medium">
+                    <span class="label-text text-lg font-medium text-base-content">
                       Enable Anime4K
                     </span>
                   </label>
@@ -437,23 +425,9 @@ export function VideoPlayerPage() {
 
                 {/* Scroll indicator */}
                 {selectedFile && (
-                  <div class="text-center animate-bounce mt-6">
-                    <svg
-                      class="w-6 h-6 mx-auto opacity-60"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                      />
-                    </svg>
-                    <p class="text-sm opacity-70 mt-2">
-                      Scroll down to view video
-                    </p>
+                  <div class="text-center animate-bounce mt-6 opacity-70">
+                    <span class="icon-[akar-icons--arrow-down] size-6" />
+                    <p class="text-sm mt-2">Scroll down to view video</p>
                   </div>
                 )}
               </div>

@@ -111,33 +111,68 @@ function Slider({
     [duration]
   );
 
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent): void => {
+      if (duration == null || current == null) {
+        return;
+      }
+
+      const key = event.key;
+      if (draggingPosition != null && (key === "Enter" || key === " ")) {
+        event.preventDefault();
+        setDraggingPosition(null);
+        onChange(draggingPosition);
+      } else if (
+        key === "ArrowLeft" ||
+        key === "ArrowRight" ||
+        key === "Enter" ||
+        key === " "
+      ) {
+        const offset =
+          (
+            { ArrowLeft: -5, ArrowRight: 5 } as Record<
+              string,
+              number | undefined
+            >
+          )[key] ?? 0;
+        event.preventDefault();
+        setDraggingPosition(
+          (draggingPosition) => (draggingPosition ?? current ?? 0) + offset
+        );
+      }
+    },
+    [duration, current, draggingPosition]
+  );
+
   return (
     <div
       class="relative w-full h-4 cursor-pointer group/slider"
       data-dragging={draggingPosition != null ? 1 : undefined}
       onMouseDown={handleMouseDown}
+      onKeyDown={handleKeyDown}
     >
       {duration != null && (
         <>
-          <div class="absolute w-full h-1 inset-0 my-auto bg-gray-700 rounded-full"></div>
+          <div class="absolute w-full h-1 inset-0 my-auto bg-gray-700 rounded-full" />
           <div
             class="absolute inset-[0_auto_0_0] my-auto h-1 bg-gray-600 rounded-full"
             style={{
               width: `${((buffered ?? 0) / duration) * 100}%`,
             }}
-          ></div>
+          />
           <div
             class="absolute inset-[0_auto_0_0] my-auto h-1 bg-gray-300 rounded-full"
             style={{
               width: `${((draggingPosition ?? seeking ?? current ?? 0) / duration) * 100}%`,
             }}
-          ></div>
+          />
           <button
+            type="button"
             class="absolute top-0 bottom-0 left-0 size-4 bg-white rounded-full -translate-x-2 opacity-0 group-hover/slider:opacity-100 group-focus-within/slider:opacity-100 group-[[data-dragging]]/slider:opacity-100 transition-opacity"
             style={{
               left: `${((draggingPosition ?? seeking ?? current ?? 0) / duration) * 100}%`,
             }}
-          ></button>
+          />
         </>
       )}
     </div>
@@ -282,6 +317,7 @@ export function CompareController({
       <div class="contents pointer-events-auto">
         <div class="absolute inset-[var(--inset)] transform-[var(--transform)] w-[var(--w,100%)] h-[var(--h,100%)] bg-white/80" />
         <button
+          type="button"
           class="absolute inset-[var(--inset)] transform-[var(--transform)] m-[var(--margin)] btn btn-circle btn-md btn-soft"
           onMouseDown={handleMouseDown}
         >
@@ -347,7 +383,6 @@ export function VideoControls({
     [onUpdateConfig, toast]
   );
 
-  const [isLoading, setIsLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [currentTime, setCurrentTime] = useState<number | null>(null);
@@ -361,7 +396,6 @@ export function VideoControls({
     const { signal } = controller;
 
     const update = (): void => {
-      setIsLoading(video.readyState < 2);
       setCurrentTime(nanToNull(video.currentTime));
       setDuration(nanToNull(video.duration));
       setVolume(nanToNull(video.volume));
@@ -565,6 +599,7 @@ export function VideoControls({
               <div class="flex items-center gap-4">
                 {/* Play/pause button */}
                 <button
+                  type="button"
                   class="flex-none btn btn-circle btn-ghost btn-neutral btn-md"
                   aria-label={isPlaying ? "Pause" : "Play"}
                   onClick={togglePlayPause}
@@ -584,7 +619,7 @@ export function VideoControls({
               </div>
               <div class="flex items-center gap-4">
                 {/* Volume control */}
-                <div class="flex items-center group/volume">
+                <div class="flex items-center group/volume not-sm:hidden">
                   <div class="w-0 flex items-center group-hover/volume:w-30 focus-within:w-30 rounded-full transition-all">
                     <input
                       type="range"
@@ -604,6 +639,7 @@ export function VideoControls({
                     <span class="w-2"></span>
                   </div>
                   <button
+                    type="button"
                     class="flex-none btn btn-circle btn-ghost btn-neutral btn-md"
                     aria-label="Toggle Mute"
                     onClick={() => {
@@ -622,6 +658,7 @@ export function VideoControls({
                 </div>
                 {/* Fullscreen button */}
                 <button
+                  type="button"
                   class="flex-none btn btn-circle btn-ghost btn-neutral btn-md"
                   aria-label="Toggle Fullscreen"
                   onClick={() => {
@@ -647,6 +684,7 @@ export function VideoControls({
                     {COMPARE_MODES.map(({ value, label }) => (
                       <li key={value}>
                         <button
+                          type="button"
                           class={compare.mode === value ? "menu-active" : ""}
                           aria-pressed={compare.mode === value}
                           onClick={() => setCompareMode(value)}
@@ -672,7 +710,7 @@ export function VideoControls({
                     class="card card-sm dropdown-content bg-base-100 rounded-box z-1 w-64 shadow-sm"
                   >
                     <div tabindex={0} class="card-body">
-                      <label class="label text-sm">
+                      <label class="label text-sm text-base-content">
                         <input
                           type="checkbox"
                           class="toggle"
