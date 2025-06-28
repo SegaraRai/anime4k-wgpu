@@ -63,7 +63,7 @@ impl ApplicationHandler for VideoPlayerApp {
         println!("  - Esc: Quit");
         println!("  - Space: Pause/Resume video playback");
         println!("  - Ctrl+0: Disable Anime4K");
-        println!("  - Ctrl+1-6: Set Anime4K preset (A, AA, B, BB, C, CA)");
+        println!("  - Ctrl+1-6: Set Anime4K preset (A, B, C, AA, BB, CA)");
         println!("  - Shift+1-5: Set Anime4K performance preset (Light, Medium, High, Ultra, Extreme)");
         println!();
 
@@ -80,7 +80,7 @@ impl ApplicationHandler for VideoPlayerApp {
     /// This method processes user input for playback control and Anime4K preset changes:
     /// - Escape: Quit application
     /// - Space: Toggle pause/resume
-    /// - Ctrl+0-6: Set Anime4K presets (Off, A, AA, B, BB, C, CA)
+    /// - Ctrl+0-6: Set Anime4K presets (Off, A, B, C, AA, BB, CA)
     /// - Shift+1-5: Set performance presets (Light, Medium, High, Ultra, Extreme)
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
         match event {
@@ -133,10 +133,10 @@ impl ApplicationHandler for VideoPlayerApp {
                 let preset = match keycode {
                     KeyCode::Digit0 => Some(Anime4KPreset::Off),
                     KeyCode::Digit1 => Some(Anime4KPreset::ModeA),
-                    KeyCode::Digit2 => Some(Anime4KPreset::ModeAA),
-                    KeyCode::Digit3 => Some(Anime4KPreset::ModeB),
-                    KeyCode::Digit4 => Some(Anime4KPreset::ModeBB),
-                    KeyCode::Digit5 => Some(Anime4KPreset::ModeC),
+                    KeyCode::Digit2 => Some(Anime4KPreset::ModeB),
+                    KeyCode::Digit3 => Some(Anime4KPreset::ModeC),
+                    KeyCode::Digit4 => Some(Anime4KPreset::ModeAA),
+                    KeyCode::Digit5 => Some(Anime4KPreset::ModeBB),
                     KeyCode::Digit6 => Some(Anime4KPreset::ModeCA),
                     _ => None,
                 };

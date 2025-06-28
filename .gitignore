@@ -8,3 +8,4 @@ target
 
 .astro
 node_modules
+dist

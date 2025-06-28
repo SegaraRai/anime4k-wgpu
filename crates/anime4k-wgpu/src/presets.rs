@@ -123,17 +123,17 @@ impl Anime4KPerformancePreset {
 pub enum Anime4KPreset {
     /// No processing applied
     Off,
-    /// Standard restore then upscale - good for most anime content
+    /// Restore → Upscale
     ModeA,
-    /// Mode A with additional restore pass - higher quality
-    ModeAA,
-    /// Soft restore then upscale - gentler processing
+    /// Restore Soft → Upscale
     ModeB,
-    /// Mode B with additional restore pass - gentler high quality
-    ModeBB,
-    /// Combined upscale and denoise - efficient for noisy content
+    /// Upscale Denoise
     ModeC,
-    /// Mode C with additional restore pass - denoise then restore
+    /// A + A: Restore → Upscale → Restore
+    ModeAA,
+    /// B + B: Restore Soft → Upscale → Restore Soft
+    ModeBB,
+    /// C + A: Upscale Denoise → Restore
     ModeCA,
 }
 
@@ -143,10 +143,10 @@ impl Anime4KPreset {
         match self {
             Anime4KPreset::Off => "OFF",
             Anime4KPreset::ModeA => "Mode A",
-            Anime4KPreset::ModeAA => "Mode AA",
             Anime4KPreset::ModeB => "Mode B",
-            Anime4KPreset::ModeBB => "Mode BB",
             Anime4KPreset::ModeC => "Mode C",
+            Anime4KPreset::ModeAA => "Mode AA",
+            Anime4KPreset::ModeBB => "Mode BB",
             Anime4KPreset::ModeCA => "Mode CA",
         }
     }
