@@ -34,11 +34,13 @@ function formatTime(
 
 function Slider({
   current,
+  seeking,
   buffered,
   duration,
   onChange,
 }: {
   readonly current: number | null;
+  readonly seeking: number | null;
   readonly buffered: number | null;
   readonly duration: number | null;
   readonly onChange: (value: number) => void;
@@ -117,13 +119,13 @@ function Slider({
           <div
             class="absolute inset-[0_auto_0_0] my-auto h-1 bg-gray-300 rounded-full"
             style={{
-              width: `${((draggingPosition ?? current ?? 0) / duration) * 100}%`,
+              width: `${((draggingPosition ?? seeking ?? current ?? 0) / duration) * 100}%`,
             }}
           ></div>
           <button
             class="absolute top-0 bottom-0 left-0 size-4 bg-white rounded-full -translate-x-2 opacity-0 group-hover/slider:opacity-100 group-focus-within/slider:opacity-100 group-[[data-dragging]]/slider:opacity-100 transition-opacity"
             style={{
-              left: `${((draggingPosition ?? current ?? 0) / duration) * 100}%`,
+              left: `${((draggingPosition ?? seeking ?? current ?? 0) / duration) * 100}%`,
             }}
           ></button>
         </>
@@ -264,16 +266,18 @@ export function CompareController({
   return (
     <div
       ref={containerRef}
-      class={`absolute inset-0 w-full h-full ${varClass}`}
+      class={`absolute inset-0 pointer-events-none ${varClass}`}
       style={{ "--ratio": `${(draggingRatio ?? ratio) * 100}%` }}
     >
-      <div class="absolute inset-[var(--inset)] transform-[var(--transform)] w-[var(--w,100%)] h-[var(--h,100%)] bg-white/80" />
-      <button
-        class="absolute inset-[var(--inset)] transform-[var(--transform)] m-[var(--margin)] btn btn-circle btn-md btn-soft"
-        onMouseDown={handleMouseDown}
-      >
-        <span class={`size-5 ${iconClass}`} />
-      </button>
+      <div class="contents pointer-events-auto">
+        <div class="absolute inset-[var(--inset)] transform-[var(--transform)] w-[var(--w,100%)] h-[var(--h,100%)] bg-white/80" />
+        <button
+          class="absolute inset-[var(--inset)] transform-[var(--transform)] m-[var(--margin)] btn btn-circle btn-md btn-soft"
+          onMouseDown={handleMouseDown}
+        >
+          <span class={`size-5 ${iconClass}`} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -351,6 +355,7 @@ export function VideoControls({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [currentTime, setCurrentTime] = useState<number | null>(null);
+  const [seekingTime, setSeekingTime] = useState<number | null>(null);
   const [duration, setDuration] = useState<number | null>(null);
   const [volume, setVolume] = useState<number | null>(null);
   const [buffered, setBuffered] = useState<number>(0);
@@ -366,7 +371,17 @@ export function VideoControls({
       setVolume(video.volume);
       setIsMuted(video.muted);
       setIsPlaying(!video.paused);
-      setBuffered(video.buffered.length > 0 ? video.buffered.end(0) : 0);
+      setBuffered(
+        Array.from({ length: video.buffered.length }, (_, i) => [
+          video.buffered.start(i),
+          video.buffered.end(i),
+        ]).find(([start, end]) => {
+          return start <= video.currentTime && video.currentTime <= end;
+        })?.[1] ?? 0
+      );
+      if (!video.seeking) {
+        setSeekingTime(null);
+      }
     };
 
     video.addEventListener("loadeddata", update, { signal });
@@ -471,244 +486,245 @@ export function VideoControls({
     <div
       class="absolute inset-0 flex flex-col justify-end group select-none touch-manipulation"
       data-show-controls={!isPlaying ? 1 : undefined}
-      onClick={togglePlayPause}
       onKeyDown={handleKeyDown}
       tabIndex={0}
     >
-      {/* Compare Controller */}
-      <CompareController value={compare} onChange={onUpdateCompare} />
-      {/* Video Controller */}
-      <div class="relative bg-gradient-to-t from-[#000000f4] from-15% via-[#000000a0] via-50% opacity-0 group-hover:opacity-100 group-[[data-show-controls]]:opacity-100 has-[.dropdown:focus-within]:opacity-100 transition-opacity duration-400 w-full h-40">
-        <div
-          class="absolute inset-[auto_0_0_0] flex flex-col justify-between p-4"
-          onClick={(event) => {
+      <div class="absolute inset-0" onClick={togglePlayPause} />
+      <div
+        class="contents"
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
             event.stopPropagation();
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.stopPropagation();
-            }
-          }}
-        >
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-4">
-              {/* Play/pause button */}
-              <button
-                class="flex-none btn btn-circle btn-ghost btn-neutral btn-md"
-                aria-label={isPlaying ? "Pause" : "Play"}
-                onClick={togglePlayPause}
-              >
-                <span
-                  class={`size-5 ${
-                    isPlaying
-                      ? "icon-[akar-icons--pause]"
-                      : "icon-[akar-icons--play]"
-                  }`}
-                ></span>
-              </button>
-              {/* Current time display */}
-              <div class="flex-none text-white [font-feature-settings:'tnum'_'lnum'_'zero'_'ss01']">
-                {strCurrentTime} / {strDuration}
-              </div>
-            </div>
-            <div class="flex items-center gap-4">
-              {/* Volume control */}
-              <div class="flex items-center group/volume">
-                <div class="w-0 flex items-center group-hover/volume:w-30 focus-within:w-30 rounded-full transition-all">
-                  <input
-                    type="range"
-                    aria-label="Volume"
-                    class="w-full range range-xs text-white [--range-bg:#555] [--range-thumb:white] [--range-fill:0]"
-                    value={isMuted ? 0 : volume !== null ? volume * 100 : 100}
-                    min={0}
-                    max={100}
-                    step={1}
-                    onInput={(event) => {
-                      const target = event.target as HTMLInputElement;
-                      video.volume = parseFloat(target.value) / 100;
-                      setVolume(video.volume);
-                      setIsMuted(video.muted);
-                    }}
-                  />
-                  <span class="w-2"></span>
-                </div>
+          }
+        }}
+      >
+        {/* Compare Controller */}
+        <CompareController value={compare} onChange={onUpdateCompare} />
+        {/* Video Controller */}
+        <div class="pointer-events-none relative bg-gradient-to-t from-[#000000f4] from-15% via-[#000000a0] via-50% opacity-0 group-hover:opacity-100 group-[[data-show-controls]]:opacity-100 has-[.dropdown:focus-within]:opacity-100 transition-opacity duration-400 w-full h-40">
+          <div class="pointer-events-auto absolute inset-[auto_0_0_0] flex flex-col justify-between p-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4">
+                {/* Play/pause button */}
                 <button
                   class="flex-none btn btn-circle btn-ghost btn-neutral btn-md"
-                  aria-label="Toggle Mute"
-                  onClick={() => {
-                    video.muted = !video.muted;
-                    setIsMuted(video.muted);
-                  }}
+                  aria-label={isPlaying ? "Pause" : "Play"}
+                  onClick={togglePlayPause}
                 >
                   <span
                     class={`size-5 ${
-                      isMuted
-                        ? "icon-[akar-icons--sound-off]"
-                        : "icon-[akar-icons--sound-on]"
+                      isPlaying
+                        ? "icon-[akar-icons--pause]"
+                        : "icon-[akar-icons--play]"
                     }`}
                   ></span>
                 </button>
-              </div>
-              {/* Fullscreen button */}
-              <button
-                class="flex-none btn btn-circle btn-ghost btn-neutral btn-md"
-                aria-label="Toggle Fullscreen"
-                onClick={() => {
-                  toggleFullscreen();
-                }}
-              >
-                <span class="size-5 icon-[akar-icons--full-screen]"></span>
-              </button>
-              {/* Comparison Mode */}
-              <div class="dropdown dropdown-top dropdown-end">
-                <div
-                  tabindex={0}
-                  role="button"
-                  aria-label="Comparison Mode Menu"
-                  class={`flex-none btn btn-circle btn-ghost btn-neutral btn-md ${compare.mode !== "none" ? "text-accent" : ""}`}
-                >
-                  <span class="size-5 icon-[akar-icons--align-to-middle] rotate-90"></span>
+                {/* Current time display */}
+                <div class="flex-none text-white [font-feature-settings:'tnum'_'lnum'_'zero'_'ss01']">
+                  {strCurrentTime} / {strDuration}
                 </div>
-                <ul
-                  tabindex={0}
-                  class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
-                >
-                  {COMPARE_MODES.map(([mode, label]) => (
-                    <li key={mode}>
-                      <button
-                        class={compare.mode === mode ? "menu-active" : ""}
-                        aria-pressed={compare.mode === mode}
-                        onClick={() => setCompareMode(mode)}
-                      >
-                        {label}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
               </div>
-              {/* Menu */}
-              <div class="dropdown dropdown-top dropdown-end">
-                <div
-                  tabindex={0}
-                  role="button"
-                  aria-label="Anime4K Settings Menu"
-                  class={`flex-none btn btn-circle btn-ghost btn-neutral btn-md ${config ? "text-accent" : ""}`}
-                >
-                  <span class="size-5 icon-[akar-icons--sparkles]"></span>
+              <div class="flex items-center gap-4">
+                {/* Volume control */}
+                <div class="flex items-center group/volume">
+                  <div class="w-0 flex items-center group-hover/volume:w-30 focus-within:w-30 rounded-full transition-all">
+                    <input
+                      type="range"
+                      aria-label="Volume"
+                      class="w-full range range-xs text-white [--range-bg:#555] [--range-thumb:white] [--range-fill:0]"
+                      value={isMuted ? 0 : volume !== null ? volume * 100 : 100}
+                      min={0}
+                      max={100}
+                      step={1}
+                      onInput={(event) => {
+                        const target = event.target as HTMLInputElement;
+                        video.volume = parseFloat(target.value) / 100;
+                        setVolume(video.volume);
+                        setIsMuted(video.muted);
+                      }}
+                    />
+                    <span class="w-2"></span>
+                  </div>
+                  <button
+                    class="flex-none btn btn-circle btn-ghost btn-neutral btn-md"
+                    aria-label="Toggle Mute"
+                    onClick={() => {
+                      video.muted = !video.muted;
+                      setIsMuted(video.muted);
+                    }}
+                  >
+                    <span
+                      class={`size-5 ${
+                        isMuted
+                          ? "icon-[akar-icons--sound-off]"
+                          : "icon-[akar-icons--sound-on]"
+                      }`}
+                    ></span>
+                  </button>
                 </div>
-                <div
-                  tabindex={0}
-                  class="card card-sm dropdown-content bg-base-100 rounded-box z-1 w-64 shadow-sm"
+                {/* Fullscreen button */}
+                <button
+                  class="flex-none btn btn-circle btn-ghost btn-neutral btn-md"
+                  aria-label="Toggle Fullscreen"
+                  onClick={() => {
+                    toggleFullscreen();
+                  }}
                 >
-                  <div tabindex={0} class="card-body">
-                    <label class="label text-sm">
-                      <input
-                        type="checkbox"
-                        class="toggle"
-                        checked={config !== null}
-                        onChange={(event) => {
-                          if (event.currentTarget.checked) {
-                            updateConfig(FALLBACK_CONFIG);
-                          } else {
-                            updateConfig(null);
-                          }
-                        }}
-                      />
-                      Enable Anime4K
-                    </label>
-                    <fieldset class="fieldset" disabled={!config}>
-                      <legend class="fieldset-legend">Scale Factor</legend>
-                      <input
-                        type="range"
-                        min={MIN_SCALE_FACTOR}
-                        max={MAX_SCALE_FACTOR}
-                        value={displayConfig.scale}
-                        class="range"
-                        step="1"
-                        onInput={(event) => {
-                          const target = event.target as HTMLInputElement;
-                          const scale = parseFloat(target.value);
-                          updateConfig({
-                            ...displayConfig,
-                            scale,
-                          });
-                        }}
-                      />
-                      <div
-                        class="flex justify-between px-2.5 mt-2 text-xs"
-                        aria-hidden="true"
-                      >
-                        {Array.from(
-                          { length: MAX_SCALE_FACTOR - MIN_SCALE_FACTOR + 1 },
-                          (_, i) => (
-                            <span key={i}>{i + MIN_SCALE_FACTOR}</span>
-                          )
-                        )}
-                      </div>
-                    </fieldset>
-                    <fieldset class="fieldset" disabled={!config}>
-                      <legend class="fieldset-legend">Preset</legend>
-                      <select
-                        class="select"
-                        onChange={(event) => {
-                          const preset = event.currentTarget
-                            .value as Anime4KPreset;
-                          updateConfig({
-                            ...displayConfig,
-                            preset,
-                          });
-                        }}
-                      >
-                        {PRESETS.map(([preset, label]) => (
-                          <option
-                            key={preset}
-                            value={preset}
-                            selected={config?.preset === preset}
-                          >
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                    </fieldset>
-                    <fieldset class="fieldset" disabled={!config}>
-                      <legend class="fieldset-legend">Performance</legend>
-                      <select
-                        class="select"
-                        onChange={(event) => {
-                          const performance = event.currentTarget
-                            .value as Anime4KPerformancePreset;
-                          updateConfig({
-                            ...displayConfig,
-                            performance,
-                          });
-                        }}
-                      >
-                        {PERFORMANCE_PRESETS.map(([preset, label]) => (
-                          <option
-                            key={preset}
-                            value={preset}
-                            selected={displayConfig.performance === preset}
-                          >
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                    </fieldset>
+                  <span class="size-5 icon-[akar-icons--full-screen]"></span>
+                </button>
+                {/* Comparison Mode */}
+                <div class="dropdown dropdown-top dropdown-end">
+                  <div
+                    tabindex={0}
+                    role="button"
+                    aria-label="Comparison Mode Menu"
+                    class={`flex-none btn btn-circle btn-ghost btn-neutral btn-md ${compare.mode !== "none" ? "text-accent" : ""}`}
+                  >
+                    <span class="size-5 icon-[akar-icons--align-to-middle] rotate-90"></span>
+                  </div>
+                  <ul
+                    tabindex={0}
+                    class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm"
+                  >
+                    {COMPARE_MODES.map(([mode, label]) => (
+                      <li key={mode}>
+                        <button
+                          class={compare.mode === mode ? "menu-active" : ""}
+                          aria-pressed={compare.mode === mode}
+                          onClick={() => setCompareMode(mode)}
+                        >
+                          {label}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                {/* Menu */}
+                <div class="dropdown dropdown-top dropdown-end">
+                  <div
+                    tabindex={0}
+                    role="button"
+                    aria-label="Anime4K Settings Menu"
+                    class={`flex-none btn btn-circle btn-ghost btn-neutral btn-md ${config ? "text-accent" : ""}`}
+                  >
+                    <span class="size-5 icon-[akar-icons--sparkles]"></span>
+                  </div>
+                  <div
+                    tabindex={0}
+                    class="card card-sm dropdown-content bg-base-100 rounded-box z-1 w-64 shadow-sm"
+                  >
+                    <div tabindex={0} class="card-body">
+                      <label class="label text-sm">
+                        <input
+                          type="checkbox"
+                          class="toggle"
+                          checked={config !== null}
+                          onChange={(event) => {
+                            if (event.currentTarget.checked) {
+                              updateConfig(FALLBACK_CONFIG);
+                            } else {
+                              updateConfig(null);
+                            }
+                          }}
+                        />
+                        Enable Anime4K
+                      </label>
+                      <fieldset class="fieldset" disabled={!config}>
+                        <legend class="fieldset-legend">Scale Factor</legend>
+                        <input
+                          type="range"
+                          min={MIN_SCALE_FACTOR}
+                          max={MAX_SCALE_FACTOR}
+                          value={displayConfig.scale}
+                          class="range"
+                          step="1"
+                          onInput={(event) => {
+                            const target = event.target as HTMLInputElement;
+                            const scale = parseFloat(target.value);
+                            updateConfig({
+                              ...displayConfig,
+                              scale,
+                            });
+                          }}
+                        />
+                        <div
+                          class="flex justify-between px-2.5 mt-2 text-xs"
+                          aria-hidden="true"
+                        >
+                          {Array.from(
+                            { length: MAX_SCALE_FACTOR - MIN_SCALE_FACTOR + 1 },
+                            (_, i) => (
+                              <span key={i}>{i + MIN_SCALE_FACTOR}</span>
+                            )
+                          )}
+                        </div>
+                      </fieldset>
+                      <fieldset class="fieldset" disabled={!config}>
+                        <legend class="fieldset-legend">Preset</legend>
+                        <select
+                          class="select"
+                          onChange={(event) => {
+                            const preset = event.currentTarget
+                              .value as Anime4KPreset;
+                            updateConfig({
+                              ...displayConfig,
+                              preset,
+                            });
+                          }}
+                        >
+                          {PRESETS.map(([preset, label]) => (
+                            <option
+                              key={preset}
+                              value={preset}
+                              selected={config?.preset === preset}
+                            >
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </fieldset>
+                      <fieldset class="fieldset" disabled={!config}>
+                        <legend class="fieldset-legend">Performance</legend>
+                        <select
+                          class="select"
+                          onChange={(event) => {
+                            const performance = event.currentTarget
+                              .value as Anime4KPerformancePreset;
+                            updateConfig({
+                              ...displayConfig,
+                              performance,
+                            });
+                          }}
+                        >
+                          {PERFORMANCE_PRESETS.map(([preset, label]) => (
+                            <option
+                              key={preset}
+                              value={preset}
+                              selected={displayConfig.performance === preset}
+                            >
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </fieldset>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-          {/* Playback progress */}
-          <div class="px-2">
-            <Slider
-              current={currentTime}
-              buffered={buffered}
-              duration={duration}
-              onChange={(value) => {
-                video.currentTime = value;
-              }}
-            />
+            {/* Playback progress */}
+            <div class="px-2">
+              <Slider
+                current={currentTime}
+                seeking={seekingTime}
+                buffered={buffered}
+                duration={duration}
+                onChange={(value) => {
+                  video.currentTime = value;
+                  setSeekingTime(value);
+                }}
+              />
+            </div>
           </div>
         </div>
       </div>
