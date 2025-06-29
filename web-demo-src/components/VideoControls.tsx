@@ -632,6 +632,7 @@ export function VideoControls({
                       onInput={(event) => {
                         const target = event.target as HTMLInputElement;
                         video.volume = parseFloat(target.value) / 100;
+                        video.muted = false;
                         setVolume(video.volume);
                         setIsMuted(video.muted);
                       }}
