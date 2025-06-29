@@ -37,6 +37,8 @@ export function Toast({
         class={`alert ${className} transform transition-all duration-300 ease-out ${
           isVisible ? "translate-y-0 opacity-100 scale-100" : hiddenTransform
         }`}
+        role="alert"
+        aria-live="polite"
       >
         <span class="whitespace-pre-line">{message}</span>
       </div>
