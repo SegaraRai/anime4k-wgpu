@@ -291,7 +291,10 @@ export function VideoPlayerPage() {
                           });
                         }}
                       />
-                      <div class="flex justify-between text-xs opacity-60 px-2 mt-1">
+                      <div
+                        class="flex justify-between text-xs opacity-60 px-2 mt-1"
+                        aria-hidden="true"
+                      >
                         {Array.from(
                           { length: MAX_SCALE_FACTOR - MIN_SCALE_FACTOR + 1 },
                           (_, i) => (
@@ -375,59 +378,87 @@ export function VideoPlayerPage() {
                     {/* Video Controls */}
                     <div class="card bg-base-200/50 p-4">
                       <h5 class="font-medium mb-2">Video Controls</h5>
-                      <div class="space-y-1 text-sm">
+                      <dl class="space-y-1 text-sm">
                         <div class="flex justify-between">
-                          <kbd class="kbd kbd-xs">Space</kbd>
-                          <span>Play/Pause</span>
+                          <dt class="space-x-1">
+                            <kbd class="kbd kbd-xs">Space</kbd>
+                            {"/"}
+                            <kbd class="kbd kbd-xs">Enter</kbd>
+                          </dt>
+                          <dd>Play/Pause</dd>
                         </div>
                         <div class="flex justify-between">
-                          <kbd class="kbd kbd-xs">Enter</kbd>
-                          <span>Play/Pause</span>
+                          <dt class="space-x-1">
+                            <kbd class="kbd kbd-xs">←</kbd>
+                            {"/"}
+                            <kbd class="kbd kbd-xs">→</kbd>
+                          </dt>
+                          <dd>Seek Backward/Forward 10s</dd>
                         </div>
                         <div class="flex justify-between">
-                          <kbd class="kbd kbd-xs">F</kbd>
-                          <span>Toggle Fullscreen</span>
+                          <dt class="space-x-1">
+                            <kbd class="kbd kbd-xs">↑</kbd>
+                            {"/"}
+                            <kbd class="kbd kbd-xs">↓</kbd>
+                          </dt>
+                          <dd>Increase/Decrease Volume</dd>
                         </div>
                         <div class="flex justify-between">
-                          <kbd class="kbd kbd-xs">C</kbd>
-                          <span>Next Compare Mode</span>
+                          <dt>
+                            <kbd class="kbd kbd-xs">M</kbd>
+                          </dt>
+                          <dd>Toggle Mute</dd>
                         </div>
                         <div class="flex justify-between">
-                          <span class="space-x-1">
+                          <dt>
+                            <kbd class="kbd kbd-xs">F</kbd>
+                          </dt>
+                          <dd>Toggle Fullscreen</dd>
+                        </div>
+                        <div class="flex justify-between">
+                          <dt class="space-x-1">
+                            <kbd class="kbd kbd-xs">C</kbd>
+                            {"/"}
                             <kbd class="kbd kbd-xs">Shift</kbd>
                             <kbd class="kbd kbd-xs">C</kbd>
-                          </span>
-                          <span>Previous Compare Mode</span>
+                          </dt>
+                          <dd>Next/Previous Compare Mode</dd>
                         </div>
-                      </div>
+                        <div class="flex justify-between">
+                          <dt>
+                            <kbd class="kbd kbd-xs">O</kbd>
+                          </dt>
+                          <dd>Open File Dialog</dd>
+                        </div>
+                      </dl>
                     </div>
 
                     {/* Anime4K Controls */}
                     <div class="card bg-base-200/50 p-4">
                       <h5 class="font-medium mb-2">Anime4K Controls</h5>
-                      <div class="space-y-1 text-sm">
+                      <dl class="space-y-1 text-sm">
                         <div class="flex justify-between">
-                          <span class="space-x-1">
+                          <dt class="space-x-1">
                             <kbd class="kbd kbd-xs">Ctrl</kbd>
                             <kbd class="kbd kbd-xs">0</kbd>
-                          </span>
-                          <span>Disable Anime4K</span>
+                          </dt>
+                          <dd>Disable Anime4K</dd>
                         </div>
                         <div class="flex justify-between">
-                          <span class="space-x-1">
+                          <dt class="space-x-1">
                             <kbd class="kbd kbd-xs">Ctrl</kbd>
                             <kbd class="kbd kbd-xs">1-6</kbd>
-                          </span>
-                          <span>Set Preset (A, B, C, AA, BB, CA)</span>
+                          </dt>
+                          <dd>Set Preset (A, B, C, AA, BB, CA)</dd>
                         </div>
                         <div class="flex justify-between">
-                          <span class="space-x-1">
+                          <dt class="space-x-1">
                             <kbd class="kbd kbd-xs">Shift</kbd>
                             <kbd class="kbd kbd-xs">1-5</kbd>
-                          </span>
-                          <span>Set Performance (Light to Extreme)</span>
+                          </dt>
+                          <dd>Set Performance (Light to Extreme)</dd>
                         </div>
-                      </div>
+                      </dl>
                     </div>
                   </div>
                   <div class="text-xs opacity-70 mt-2 text-center">
