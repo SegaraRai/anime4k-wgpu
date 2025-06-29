@@ -5,6 +5,7 @@
 //! structures with pre-allocated resources and optimal memory layouts.
 
 use super::{PhysicalTexture, PipelineSpec, SamplerBinding, SamplerFilterMode, ScaleFactor, TextureLifetime, physical_texture::assign_physical_textures};
+use serde::Serialize;
 use std::{
     collections::{HashMap, HashSet},
     fmt,
@@ -14,7 +15,7 @@ use std::{
 ///
 /// This structure represents a fully compiled and optimized shader pipeline
 /// with all resources pre-allocated and shader code embedded for maximum performance.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ExecutablePipeline {
     /// Unique identifier for this pipeline
     pub id: String,
@@ -34,7 +35,7 @@ pub struct ExecutablePipeline {
 ///
 /// Contains all the information needed to execute one stage of the pipeline,
 /// including compiled shader code and optimized resource bindings.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ExecutablePass {
     /// Unique identifier for this pass
     pub id: String,
@@ -51,7 +52,7 @@ pub struct ExecutablePass {
 }
 
 /// Binding of a physical texture in an executable pass
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct PhysicalTextureBinding {
     /// Original logical texture identifier
     pub logical_id: String,

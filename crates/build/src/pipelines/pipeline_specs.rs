@@ -4,7 +4,7 @@
 //! shader pipeline configurations. The parser handles scale factors in formats like
 //! "1/2", "2", etc. and validates pipeline structure.
 
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::fmt;
 use std::str::FromStr;
 
@@ -12,7 +12,7 @@ use std::str::FromStr;
 ///
 /// Used to express scaling relationships between textures in the pipeline,
 /// supporting both simple integers (e.g., "2") and fractions (e.g., "1/2").
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct ScaleFactor {
     /// The numerator of the fraction
     pub numerator: u32,
@@ -129,7 +129,7 @@ pub struct TextureBindingSpec {
 }
 
 /// Texture sampling filter modes
-#[derive(Default, Debug, Clone, Copy, Eq, PartialEq, Hash, Deserialize)]
+#[derive(Default, Debug, Clone, Copy, Eq, PartialEq, Hash, Deserialize, Serialize)]
 pub enum SamplerFilterMode {
     /// Nearest neighbor filtering - sharp, pixelated
     #[serde(rename = "nearest")]
@@ -141,7 +141,7 @@ pub enum SamplerFilterMode {
 }
 
 /// Binding of a texture sampler to a shader binding point
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct SamplerBinding {
     /// Shader binding point index
     pub binding: u32,

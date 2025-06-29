@@ -1,6 +1,13 @@
+.claude
+
 target
 
 *.h264
+*.mp4
 *.png
 
 !example_image.png
+
+.astro
+node_modules
+dist

@@ -5,7 +5,7 @@
 //! settings to enhance image quality through neural network-based upscaling.
 //!
 //! # Features
-//! - Multiple Anime4K algorithm presets (A, AA, B, BB, C, CA)
+//! - Multiple Anime4K algorithm presets (A, B, C, AA, BB, CA)
 //! - Configurable performance levels (Light, Medium, High, Ultra, Extreme)
 //! - GPU-accelerated processing using wgpu
 //! - Support for various image formats
@@ -42,7 +42,7 @@ struct Args {
     #[arg(long, short, default_value = "2.0")]
     scale_factor: f64,
 
-    /// Anime4K preset (a, aa, b, bb, c, ca)
+    /// Anime4K preset (a, b, c, aa, bb, ca)
     #[arg(long, short, default_value = "a")]
     preset: String,
 
@@ -75,13 +75,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Parse and validate Anime4K algorithm preset
     let preset = match args.preset.to_lowercase().as_str() {
         "a" => Anime4KPreset::ModeA,
-        "aa" => Anime4KPreset::ModeAA,
         "b" => Anime4KPreset::ModeB,
-        "bb" => Anime4KPreset::ModeBB,
         "c" => Anime4KPreset::ModeC,
+        "aa" => Anime4KPreset::ModeAA,
+        "bb" => Anime4KPreset::ModeBB,
         "ca" => Anime4KPreset::ModeCA,
         _ => {
-            eprintln!("Invalid preset '{}'. Valid presets: a, aa, b, bb, c, ca", args.preset);
+            eprintln!("Invalid preset '{}'. Valid presets: a, b, c, aa, bb, ca", args.preset);
             std::process::exit(1);
         }
     };

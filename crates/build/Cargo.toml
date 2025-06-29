@@ -7,10 +7,17 @@ edition = "2024"
 name = "analyze"
 path = "src/bin/analyze.rs"
 
+[[bin]]
+name = "dump_predefined"
+path = "src/bin/dump_predefined.rs"
+
 [dependencies]
 regex = "1"
 serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 serde_norway = "0.9"
+naga = { version = "24", features = ["wgsl-in", "wgsl-out"] }
+wgsl-minifier = "0.7"
 
 [dev-dependencies]
 wgpu = { version = "25", features = ["glsl"] }

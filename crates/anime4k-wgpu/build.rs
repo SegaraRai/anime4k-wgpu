@@ -4,30 +4,19 @@
 //! It processes GLSL CNN shaders and WGSL manifests to create optimized executable pipelines
 //! that are embedded directly into the compiled binary for maximum performance.
 
-use anime4k_wgpu_build::{cnn_glsl_to_executable_pipeline, pipelines::ExecutablePipeline, wgsl_to_executable_pipeline};
-
-/// Minifies WGSL shader source code to reduce binary size
-///
-/// Uses naga to parse, validate, and regenerate the WGSL code in a more compact form.
-/// This reduces the size of embedded shaders without affecting functionality.
-fn minify_wgsl(shader: &str) -> String {
-    let mut module = naga::front::wgsl::parse_str(shader).expect("Failed to parse WGSL shader");
-
-    wgsl_minifier::minify_module(&mut module);
-
-    let mut validator = naga::valid::Validator::new(naga::valid::ValidationFlags::all(), naga::valid::Capabilities::all());
-    let info = validator.validate(&module).unwrap();
-    let output = naga::back::wgsl::write_string(&module, &info, naga::back::wgsl::WriterFlags::empty()).unwrap();
-
-    wgsl_minifier::minify_wgsl_source(&output)
-}
+use anime4k_wgpu_build::{
+    cnn_glsl_to_executable_pipeline,
+    pipelines::ExecutablePipeline,
+    predefined::{PREDEFINED_PIPELINES_AUX, PREDEFINED_PIPELINES_CNN},
+    wgsl_to_executable_pipeline,
+};
 
 /// Converts WGSL shader source into a Rust string literal
 ///
 /// Minifies the shader and escapes it for embedding as a string constant in generated Rust code.
 fn dump_shader_string_literal(shader: &str) -> String {
     // Escape special characters for Rust string literal
-    let escaped_shader = minify_wgsl(shader).replace('\\', "\\\\").replace('"', "\\\"").replace('\n', "\\n");
+    let escaped_shader = shader.replace('\\', "\\\\").replace('"', "\\\"").replace('\n', "\\n");
     format!("\"{}\"", escaped_shader)
 }
 
@@ -119,23 +108,23 @@ fn dump_executable_pipeline(name: &str, pipeline: &ExecutablePipeline) -> String
 /// Generates a Rust constant declaration for a CNN shader from GLSL
 ///
 /// Converts a GLSL CNN/GAN shader file to an optimized ExecutablePipeline constant.
-fn dump_cnn_shader_decl(id: &str, glsl_filepath: &str, helpers_dir: &str) -> String {
-    let pipeline = cnn_glsl_to_executable_pipeline(glsl_filepath, helpers_dir).expect("Failed to convert CNN GLSL to executable pipeline");
+fn dump_cnn_shader_decl(id: &str, glsl_filepath: &str, helpers_dir: &str, minify: bool) -> String {
+    let pipeline = cnn_glsl_to_executable_pipeline(glsl_filepath, helpers_dir, minify).expect("Failed to convert CNN GLSL to executable pipeline");
     format!("    pub const {id}: ExecutablePipeline = {};\n", dump_executable_pipeline(id, &pipeline))
 }
 
 /// Generates a Rust constant declaration for an auxiliary shader from WGSL manifest
 ///
 /// Converts a WGSL pipeline manifest to an optimized ExecutablePipeline constant.
-fn dump_aux_shader_decl(id: &str, wgsl_manifest_filepath: &str) -> String {
-    let pipeline = wgsl_to_executable_pipeline(wgsl_manifest_filepath).expect("Failed to convert WGSL to executable pipeline");
+fn dump_aux_shader_decl(id: &str, wgsl_manifest_filepath: &str, minify: bool) -> String {
+    let pipeline = wgsl_to_executable_pipeline(wgsl_manifest_filepath, minify).expect("Failed to convert WGSL to executable pipeline");
     format!("    pub const {id}: ExecutablePipeline = {};\n", dump_executable_pipeline(id, &pipeline))
 }
 
 /// Generates the complete pipelines.rs file with all Anime4K shader constants
 ///
 /// Creates both CNN and auxiliary shader modules with pre-compiled pipeline definitions.
-fn write_code() {
+fn write_code(minify: bool) {
     // Determine project directory structure
     let project_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -155,29 +144,9 @@ fn write_code() {
     // Generate auxiliary shader module with utility and experimental shaders
     code.push_str("pub mod aux {\n");
     code.push_str("use crate::executable_pipeline::*;\n\n");
-    for (id, filepath) in [
-        // Image processing utilities
-        ("CLAMP_HIGHLIGHTS", "wgsl/auxiliary/clamp_highlights_manifest.yaml"),
-        // Deblur algorithms
-        ("DEBLUR_DOG", "wgsl/auxiliary/deblur_dog_manifest.yaml"),
-        ("DEBLUR_ORIGINAL", "wgsl/auxiliary/deblur_original_manifest.yaml"),
-        // Denoise algorithms with different statistical approaches
-        ("DENOISE_BILATERAL_MEAN", "wgsl/auxiliary/denoise_bilateral_mean_manifest.yaml"),
-        ("DENOISE_BILATERAL_MEDIAN", "wgsl/auxiliary/denoise_bilateral_median_manifest.yaml"),
-        ("DENOISE_BILATERAL_MODE", "wgsl/auxiliary/denoise_bilateral_mode_manifest.yaml"),
-        // Visual effects with different performance profiles
-        ("EFFECTS_DARKEN_HQ", "wgsl/auxiliary/effects_darken_manifest_hq.yaml"),
-        ("EFFECTS_DARKEN_FAST", "wgsl/auxiliary/effects_darken_manifest_fast.yaml"),
-        ("EFFECTS_DARKEN_VERYFAST", "wgsl/auxiliary/effects_darken_manifest_veryfast.yaml"),
-        ("EFFECTS_THIN_HQ", "wgsl/auxiliary/effects_thin_manifest_hq.yaml"),
-        ("EFFECTS_THIN_FAST", "wgsl/auxiliary/effects_thin_manifest_fast.yaml"),
-        ("EFFECTS_THIN_VERYFAST", "wgsl/auxiliary/effects_thin_manifest_veryfast.yaml"),
-        // Alternative upscaling algorithms
-        ("UPSCALE_DOG_X2", "wgsl/auxiliary/upscale_dog_x2_manifest.yaml"),
-        ("UPSCALE_ORIGINAL_X2", "wgsl/auxiliary/upscale_original_x2_manifest.yaml"),
-    ] {
+    for (id, filepath) in PREDEFINED_PIPELINES_AUX.iter() {
         println!("Processing auxiliary shader: {id} from {filepath}");
-        let decl = dump_aux_shader_decl(id, &format!("{project_dir}/{filepath}"));
+        let decl = dump_aux_shader_decl(id, &format!("{project_dir}/{filepath}"), minify);
         code.push_str(&decl);
     }
     code.push_str("}\n\n");
@@ -185,47 +154,9 @@ fn write_code() {
     // Generate CNN/GAN shader module with all variants organized by category
     code.push_str("pub mod cnn {\n");
     code.push_str("use crate::executable_pipeline::*;\n\n");
-    for (id, filepath) in [
-        // Restore variants - improve image quality without upscaling
-        ("RESTORE_CNN_S", "anime4k-glsl/Restore/Anime4K_Restore_CNN_S.glsl"),
-        ("RESTORE_CNN_M", "anime4k-glsl/Restore/Anime4K_Restore_CNN_M.glsl"),
-        ("RESTORE_CNN_L", "anime4k-glsl/Restore/Anime4K_Restore_CNN_L.glsl"),
-        ("RESTORE_CNN_VL", "anime4k-glsl/Restore/Anime4K_Restore_CNN_VL.glsl"),
-        ("RESTORE_CNN_UL", "anime4k-glsl/Restore/Anime4K_Restore_CNN_UL.glsl"),
-        // Restore GAN variants - generative adversarial network restoration
-        ("RESTORE_GAN_UL", "anime4k-glsl/Restore/Anime4K_Restore_GAN_UL.glsl"),
-        ("RESTORE_GAN_UUL", "anime4k-glsl/Restore/Anime4K_Restore_GAN_UUL.glsl"),
-        // Restore Soft variants - gentler restoration algorithms
-        ("RESTORE_SOFT_CNN_S", "anime4k-glsl/Restore/Anime4K_Restore_CNN_Soft_S.glsl"),
-        ("RESTORE_SOFT_CNN_M", "anime4k-glsl/Restore/Anime4K_Restore_CNN_Soft_M.glsl"),
-        ("RESTORE_SOFT_CNN_L", "anime4k-glsl/Restore/Anime4K_Restore_CNN_Soft_L.glsl"),
-        ("RESTORE_SOFT_CNN_VL", "anime4k-glsl/Restore/Anime4K_Restore_CNN_Soft_VL.glsl"),
-        ("RESTORE_SOFT_CNN_UL", "anime4k-glsl/Restore/Anime4K_Restore_CNN_Soft_UL.glsl"),
-        // Upscale variants - 2x upscaling with different quality levels
-        ("UPSCALE_CNN_X2_S", "anime4k-glsl/Upscale/Anime4K_Upscale_CNN_x2_S.glsl"),
-        ("UPSCALE_CNN_X2_M", "anime4k-glsl/Upscale/Anime4K_Upscale_CNN_x2_M.glsl"),
-        ("UPSCALE_CNN_X2_L", "anime4k-glsl/Upscale/Anime4K_Upscale_CNN_x2_L.glsl"),
-        ("UPSCALE_CNN_X2_VL", "anime4k-glsl/Upscale/Anime4K_Upscale_CNN_x2_VL.glsl"),
-        ("UPSCALE_CNN_X2_UL", "anime4k-glsl/Upscale/Anime4K_Upscale_CNN_x2_UL.glsl"),
-        // Upscale GAN variants - generative adversarial network upscaling
-        ("UPSCALE_GAN_X2_S", "anime4k-glsl/Upscale/Anime4K_Upscale_GAN_x2_S.glsl"),
-        ("UPSCALE_GAN_X2_M", "anime4k-glsl/Upscale/Anime4K_Upscale_GAN_x2_M.glsl"),
-        ("UPSCALE_GAN_X3_L", "anime4k-glsl/Upscale/Anime4K_Upscale_GAN_x3_L.glsl"),
-        ("UPSCALE_GAN_X3_VL", "anime4k-glsl/Upscale/Anime4K_Upscale_GAN_x3_VL.glsl"),
-        ("UPSCALE_GAN_X4_UL", "anime4k-glsl/Upscale/Anime4K_Upscale_GAN_x4_UL.glsl"),
-        ("UPSCALE_GAN_X4_UUL", "anime4k-glsl/Upscale/Anime4K_Upscale_GAN_x4_UUL.glsl"),
-        // Upscale + Denoise variants - combined upscaling and noise reduction
-        ("UPSCALE_DENOISE_CNN_X2_S", "anime4k-glsl/Upscale+Denoise/Anime4K_Upscale_Denoise_CNN_x2_S.glsl"),
-        ("UPSCALE_DENOISE_CNN_X2_M", "anime4k-glsl/Upscale+Denoise/Anime4K_Upscale_Denoise_CNN_x2_M.glsl"),
-        ("UPSCALE_DENOISE_CNN_X2_L", "anime4k-glsl/Upscale+Denoise/Anime4K_Upscale_Denoise_CNN_x2_L.glsl"),
-        ("UPSCALE_DENOISE_CNN_X2_VL", "anime4k-glsl/Upscale+Denoise/Anime4K_Upscale_Denoise_CNN_x2_VL.glsl"),
-        ("UPSCALE_DENOISE_CNN_X2_UL", "anime4k-glsl/Upscale+Denoise/Anime4K_Upscale_Denoise_CNN_x2_UL.glsl"),
-        // 3D Graphics variants - specialized for 3D rendered content
-        ("UPSCALE_3DCG_CNN_X2_US", "anime4k-glsl/Upscale/Anime4K_3DGraphics_Upscale_x2_US.glsl"),
-        ("UPSCALE_3DCG_AA_CNN_X2_US", "anime4k-glsl/Upscale/Anime4K_3DGraphics_AA_Upscale_x2_US.glsl"),
-    ] {
+    for (id, filepath) in PREDEFINED_PIPELINES_CNN.iter() {
         println!("Processing CNN shader: {id} from {filepath}");
-        let decl = dump_cnn_shader_decl(id, &format!("{project_dir}/{filepath}"), &helpers_dir);
+        let decl = dump_cnn_shader_decl(id, &format!("{project_dir}/{filepath}"), &helpers_dir, minify);
         code.push_str(&decl);
     }
     code.push_str("}\n\n");
@@ -258,5 +189,6 @@ fn main() {
     }
 
     // Generate all pipeline constants
-    write_code();
+    let minify = true;
+    write_code(minify);
 }

@@ -1,0 +1,12 @@
+---
+import { VideoPlayerPage } from "../components/VideoPlayerPage";
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout
+  rootClass="w-full h-full scroll-smooth"
+  bodyClass="w-full h-full overflow-hidden"
+  mainClass="w-full h-full overflow-auto snap-y snap-mandatory"
+>
+  <VideoPlayerPage client:load />
+</Layout>

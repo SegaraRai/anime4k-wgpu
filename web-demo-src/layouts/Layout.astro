@@ -1,0 +1,24 @@
+---
+import "../global.css";
+
+interface Props {
+  rootClass?: any;
+  bodyClass?: any;
+  mainClass?: any;
+  title?: string;
+}
+---
+
+<!doctype html>
+<html lang="en" class:list={Astro.props.rootClass}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{Astro.props.title ?? "Anime4K-wgpu Web Demo"}</title>
+  </head>
+  <body class:list={Astro.props.bodyClass}>
+    <main class:list={Astro.props.mainClass ?? "contents"}>
+      <slot />
+    </main>
+  </body>
+</html>

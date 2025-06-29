@@ -111,7 +111,6 @@ dependencies = [
  "clap",
  "futures-intrusive",
  "image",
- "naga 24.0.0",
  "pollster",
  "regex",
  "tokio",
@@ -119,7 +118,6 @@ dependencies = [
  "tracing-subscriber",
  "vk-video",
  "wgpu",
- "wgsl-minifier",
  "winit",
 ]
 
@@ -129,12 +127,15 @@ version = "1.0.0"
 dependencies = [
  "futures-intrusive",
  "image",
+ "naga 24.0.0",
  "pollster",
  "regex",
  "serde",
+ "serde_json",
  "serde_norway",
  "tokio",
  "wgpu",
+ "wgsl-minifier",
 ]
 
 [[package]]
@@ -2284,6 +2285,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.104",
+]
+
+[[package]]
+name = "serde_json"
+version = "1.0.140"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20068b6e96dc6c9bd23e01df8827e6c7e1f2fddd43c21810382803c136b99373"
+dependencies = [
+ "itoa",
+ "memchr",
+ "ryu",
+ "serde",
 ]
 
 [[package]]
