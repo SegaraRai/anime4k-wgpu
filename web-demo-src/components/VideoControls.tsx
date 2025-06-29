@@ -14,6 +14,7 @@ import {
   type CompareConfig,
 } from "./constants";
 import { Toast } from "./Toast";
+import { useDrag } from "./useDrag";
 import { useToast } from "./useToast";
 
 const SEEK_OFFSET_DIRECT = 10; // seconds
@@ -60,59 +61,29 @@ function Slider({
   readonly onChange: (value: number) => void;
 }) {
   const [draggingPosition, setDraggingPosition] = useState<number | null>(null);
-  const [sliderRect, setSliderRect] = useState<DOMRect | null>(null);
 
-  useEffect(() => {
-    if (draggingPosition == null || duration == null || sliderRect == null) {
-      return;
-    }
-
-    const controller = new AbortController();
-    const { signal } = controller;
-
-    document.addEventListener(
-      "mousemove",
-      (event: MouseEvent): void => {
-        const offsetX = event.clientX - sliderRect.left;
-        const clampedOffsetX = Math.max(0, Math.min(offsetX, sliderRect.width));
-        const newPosition = (clampedOffsetX / sliderRect.width) * duration;
-        setDraggingPosition(newPosition);
-      },
-      { signal }
-    );
-
-    document.addEventListener(
-      "mouseup",
-      (): void => {
-        if (draggingPosition == null) {
-          return;
-        }
-
-        onChange(draggingPosition);
-        setDraggingPosition(null);
-        setSliderRect(null);
-      },
-      { signal }
-    );
-
-    return () => {
-      controller.abort();
-    };
-  }, [draggingPosition, duration, sliderRect, onChange]);
-
-  const handleMouseDown = useCallback(
-    (event: MouseEvent): void => {
-      if (duration == null) {
-        return;
-      }
-
-      const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-      const offsetX = event.clientX - rect.left;
-      const newPosition = (offsetX / rect.width) * duration;
-      setDraggingPosition(newPosition);
-      setSliderRect(rect);
+  const onUpdateDrag = useCallback(
+    (value: number): void => {
+      setDraggingPosition(value * (duration ?? 0));
     },
     [duration]
+  );
+
+  const onEndDrag = useCallback(
+    (value: number): void => {
+      onChange(value * (duration ?? 0));
+      setDraggingPosition(null);
+    },
+    [duration, onChange]
+  );
+
+  const { handleMouseDown, handleTouchStart } = useDrag(
+    duration != null
+      ? {
+          onUpdate: onUpdateDrag,
+          onEnd: onEndDrag,
+        }
+      : {}
   );
 
   const handleKeyDown = useCallback(
@@ -152,8 +123,21 @@ function Slider({
     <div
       class="relative w-full h-4 cursor-pointer group/slider"
       data-dragging={draggingPosition != null ? 1 : undefined}
-      onMouseDown={handleMouseDown}
       onKeyDown={handleKeyDown}
+      onMouseDown={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (duration != null) {
+          handleMouseDown(event.currentTarget, "x", event);
+        }
+      }}
+      onTouchStart={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (duration != null) {
+          handleTouchStart(event.currentTarget, "x", event);
+        }
+      }}
     >
       {duration != null && (
         <>
@@ -172,7 +156,7 @@ function Slider({
           />
           <button
             type="button"
-            class="absolute top-0 bottom-0 left-0 size-4 bg-white rounded-full -translate-x-2 opacity-0 group-hover/slider:opacity-100 group-focus-within/slider:opacity-100 group-[[data-dragging]]/slider:opacity-100 transition-opacity"
+            class="absolute top-0 bottom-0 left-0 size-4 bg-white rounded-full -translate-x-2 opacity-0 group-hover/slider:opacity-100 group-focus-within/slider:opacity-100 group-[[data-dragging]]/slider:opacity-100 transition-opacity cursor-pointer"
             style={{
               left: `${((draggingPosition ?? seeking ?? current ?? 0) / duration) * 100}%`,
             }}
@@ -204,67 +188,24 @@ export function CompareController({
   readonly onChange: (compare: CompareConfig) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [draggingRatio, setDraggingRatio] = useState<number | null>(null);
-  const [containerRect, setContainerRect] = useState<DOMRect | null>(null);
 
-  useEffect(() => {
-    if (draggingRatio == null || containerRect == null) {
-      return;
-    }
-
-    const controller = new AbortController();
-    const { signal } = controller;
-
-    document.addEventListener(
-      "mousemove",
-      (event: MouseEvent): void => {
-        if (mode === "none" || mode === "onyx") {
-          return;
-        }
-
-        const newDraggingRatio = calcRatio(mode, containerRect, event);
-        setDraggingRatio(newDraggingRatio);
-        onChange({
-          mode,
-          ratio: newDraggingRatio,
-        });
-      },
-      { signal }
-    );
-
-    document.addEventListener(
-      "mouseup",
-      (): void => {
-        if (draggingRatio == null) {
-          return;
-        }
-
-        onChange({
-          mode,
-          ratio: draggingRatio,
-        });
-        setDraggingRatio(null);
-        setContainerRect(null);
-      },
-      { signal }
-    );
-
-    return () => {
-      controller.abort();
-    };
-  }, [mode, draggingRatio, containerRect, onChange]);
-
-  const handleMouseDown = useCallback(
-    (event: MouseEvent): void => {
-      if (mode === "none" || mode === "onyx" || !containerRef.current) {
-        return;
-      }
-
-      const rect = containerRef.current.getBoundingClientRect();
-      setDraggingRatio(calcRatio(mode, rect, event));
-      setContainerRect(rect);
+  const onUpdateDrag = useCallback(
+    (value: number): void => {
+      onChange({
+        mode,
+        ratio: value,
+      });
     },
-    [mode]
+    [mode, onChange]
+  );
+
+  const { handleMouseDown, handleTouchStart } = useDrag(
+    mode !== "none" && mode !== "onyx"
+      ? {
+          onUpdate: onUpdateDrag,
+          onEnd: onUpdateDrag,
+        }
+      : {}
   );
 
   if (mode === "none") {
@@ -312,18 +253,33 @@ export function CompareController({
     ],
   }[mode];
 
+  const axis = mode === "left" || mode === "right" ? "x" : "y";
+
   return (
     <div
       ref={containerRef}
       class={`absolute inset-0 pointer-events-none ${varClass}`}
-      style={{ "--ratio": `${(draggingRatio ?? ratio) * 100}%` }}
+      style={{ "--ratio": `${ratio * 100}%` }}
     >
       <div class="contents pointer-events-auto">
         <div class="absolute inset-[var(--inset)] transform-[var(--transform)] w-[var(--w,100%)] h-[var(--h,100%)] bg-white/80" />
         <button
           type="button"
           class="absolute inset-[var(--inset)] transform-[var(--transform)] m-[var(--margin)] btn btn-circle btn-md btn-soft"
-          onMouseDown={handleMouseDown}
+          onMouseDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (containerRef.current) {
+              handleMouseDown(containerRef.current, axis, event);
+            }
+          }}
+          onTouchStart={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (containerRef.current) {
+              handleTouchStart(containerRef.current, axis, event);
+            }
+          }}
         >
           <span class={`size-5 ${iconClass}`} />
         </button>
