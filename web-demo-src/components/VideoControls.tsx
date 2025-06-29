@@ -545,7 +545,7 @@ export function VideoControls({
         case "arrowdown":
           event.preventDefault();
           updateVolumeByOffset(
-            key === "arrowup" ? -VOLUME_OFFSET : VOLUME_OFFSET
+            key === "arrowup" ? VOLUME_OFFSET : -VOLUME_OFFSET
           );
           break;
 
@@ -627,12 +627,15 @@ export function VideoControls({
 
   return (
     <div
-      class="absolute inset-0 flex flex-col justify-end group select-none touch-manipulation focus:!outline-none"
+      class="absolute inset-0 flex flex-col justify-end group select-none touch-manipulation"
       data-show-controls={!isPlaying ? 1 : undefined}
       onKeyDown={handleKeyDown}
-      tabIndex={0}
     >
-      <div class="absolute inset-0" onClick={togglePlayPause} />
+      <button
+        class="absolute inset-0 focus:!outline-none opacity-0"
+        aria-label="Play/Pause"
+        onClick={togglePlayPause}
+      />
       <div
         class="contents"
         onKeyDown={(event) => {

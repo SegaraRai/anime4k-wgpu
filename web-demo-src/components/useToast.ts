@@ -3,11 +3,10 @@ import { useCallback, useRef, useState } from "preact/hooks";
 export interface ToastOptions {
   duration?: number;
   fadeOutDuration?: number;
-  fadeInDelay?: number;
 }
 
 export function useToast(options: ToastOptions = {}) {
-  const { duration = 3000, fadeOutDuration = 300, fadeInDelay = 150 } = options;
+  const { duration = 3000, fadeOutDuration = 300 } = options;
 
   const [message, setMessage] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -34,7 +33,7 @@ export function useToast(options: ToastOptions = {}) {
         );
       }, duration);
     },
-    [duration, fadeOutDuration, fadeInDelay]
+    [duration, fadeOutDuration]
   );
 
   const hideToast = useCallback(() => {
