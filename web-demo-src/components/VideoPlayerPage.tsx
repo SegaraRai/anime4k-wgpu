@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "preact/hooks";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "preact/hooks";
 import type { Anime4KConfig } from "../anime4k/player";
 import {
   DEFAULT_COMPARE,
@@ -10,13 +16,19 @@ import {
   type CompareConfig,
 } from "./constants";
 import { VideoPlayer } from "./VideoPlayer";
+import { getBrowserSupportedVideoMediaTypes } from "./videoMediaTypes";
 
 export function VideoPlayerPage() {
+  const [accept, setAccept] = useState<string>("video/*");
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [enabled, setEnabled] = useState<boolean>(true);
   const [config, setConfig] = useState<Anime4KConfig>(DEFAULT_CONFIG);
   const [compare, setCompare] = useState<CompareConfig>(DEFAULT_COMPARE);
   const [isDragOver, setIsDragOver] = useState(false);
+
+  useLayoutEffect(() => {
+    setAccept(getBrowserSupportedVideoMediaTypes().join(", "));
+  }, []);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -165,7 +177,7 @@ export function VideoPlayerPage() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="video/*"
+                accept={accept}
                 onChange={handleFileChange}
                 hidden
               />

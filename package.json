@@ -14,12 +14,15 @@
     "@iconify-json/akar-icons": "^1.2.2",
     "@iconify/tailwind4": "^1.0.6",
     "@tailwindcss/vite": "^4.1.11",
+    "@types/mime-db": "^1.43.6",
     "@webgpu/types": "^0.1.63",
     "astro": "^5.10.1",
     "daisyui": "^5.0.43",
+    "mime-db": "^1.54.0",
     "prettier": "^3.6.2",
     "tailwindcss": "^4.1.11",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "unplugin-macros": "^0.17.0"
   },
   "dependencies": {
     "preact": "^10.26.9"
