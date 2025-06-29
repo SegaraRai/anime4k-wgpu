@@ -9,23 +9,11 @@ import {
   type Anime4KPerformancePreset,
 } from "./presets";
 import predefinedPipelines from "./predefinedPipelines.json" with { type: "json" };
-import renderShader from "./render.wgsl?raw";
-import colorCorrectionShader from "./color_correction.wgsl?raw";
 
 export interface Anime4KConfig {
   readonly preset: Anime4KPreset;
   readonly performance: Anime4KPerformancePreset;
   readonly scale: number;
-}
-
-export interface ColorCorrectionConfig {
-  readonly enabled: boolean;
-  readonly sourceYUV: "bt601" | "bt709" | "bt2020";
-  readonly targetYUV: "bt601" | "bt709" | "bt2020";
-  readonly sourceRange: "limited" | "full";
-  readonly targetRange: "limited" | "full";
-  readonly sourceGamma: "srgb" | "linear" | "rec709" | "gamma2.2";
-  readonly targetGamma: "srgb" | "linear" | "rec709" | "gamma2.2";
 }
 
 interface RenderingContextInit {
@@ -36,7 +24,115 @@ interface RenderingContextInit {
 function createContextInit(device: GPUDevice): RenderingContextInit {
   // Create a render pipeline for copying float texture to canvas
   const renderShaderModule = device.createShaderModule({
-    code: renderShader,
+    code: `
+      struct VertexOutput {
+        @builtin(position) position: vec4<f32>,
+        @location(0) texCoord: vec2<f32>,
+      }
+
+      @vertex
+      fn vs_main(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
+        var pos = array<vec2<f32>, 6>(
+          vec2<f32>(-1.0, -1.0),
+          vec2<f32>( 1.0, -1.0),
+          vec2<f32>(-1.0,  1.0),
+          vec2<f32>( 1.0, -1.0),
+          vec2<f32>( 1.0,  1.0),
+          vec2<f32>(-1.0,  1.0)
+        );
+
+        var texCoord = array<vec2<f32>, 6>(
+          vec2<f32>(0.0, 1.0),
+          vec2<f32>(1.0, 1.0),
+          vec2<f32>(0.0, 0.0),
+          vec2<f32>(1.0, 1.0),
+          vec2<f32>(1.0, 0.0),
+          vec2<f32>(0.0, 0.0)
+        );
+
+        var output: VertexOutput;
+        output.position = vec4<f32>(pos[vertexIndex], 0.0, 1.0);
+        output.texCoord = texCoord[vertexIndex];
+        return output;
+      }
+
+      @group(0) @binding(0) var inputTexture: texture_2d<f32>;
+      @group(0) @binding(1) var inputSampler: sampler;
+
+      // Convert from TV range (16-235) to full range (0-255) for luma
+      // and (16-240) to full range for chroma
+      fn tvRangeToFullRange(color: vec3<f32>) -> vec3<f32> {
+        // For RGB that was converted from YUV with TV range
+        // Expand the limited range to full range
+        let expanded = (color - vec3<f32>(16.0/255.0)) / ((235.0 - 16.0) / 255.0);
+        return clamp(expanded, vec3<f32>(0.0), vec3<f32>(1.0));
+      }
+
+      // Rec.709 gamma correction (similar to sRGB but slightly different)
+      fn rec709ToLinear(color: vec3<f32>) -> vec3<f32> {
+        let alpha = 1.09929682680944;
+        let beta = 0.018053968510807;
+        return select(
+          pow((color + alpha - 1.0) / alpha, vec3<f32>(1.0 / 0.45)),
+          color / 4.5,
+          color < vec3<f32>(beta)
+        );
+      }
+
+      fn linearToRec709(linear: vec3<f32>) -> vec3<f32> {
+        let alpha = 1.09929682680944;
+        let beta = 0.018053968510807;
+        return select(
+          alpha * pow(linear, vec3<f32>(0.45)) - (alpha - 1.0),
+          4.5 * linear,
+          linear < vec3<f32>(beta / 4.5)
+        );
+      }
+
+      // Convert from sRGB gamma for display
+      fn linearToSrgb(linear: vec3<f32>) -> vec3<f32> {
+        return select(
+          pow(linear, vec3<f32>(1.0 / 2.4)) * 1.055 - 0.055,
+          linear * 12.92,
+          linear <= vec3<f32>(0.0031308)
+        );
+      }
+
+      @fragment
+      fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
+        let rawColor = textureSampleLevel(inputTexture, inputSampler, input.texCoord, 0.0);
+
+        // Toggle between different color handling approaches
+        // Approach 1: Direct passthrough (original behavior)
+        // let finalColor = rawColor.rgb;
+
+        // Approach 2: TV range expansion only
+        // let finalColor = tvRangeToFullRange(rawColor.rgb);
+
+        // Approach 3: Full Rec.709 to sRGB conversion
+        // let fullRangeColor = tvRangeToFullRange(rawColor.rgb);
+        // let linearColor = rec709ToLinear(fullRangeColor);
+        // let finalColor = linearToSrgb(linearColor);
+
+        // Alternative approaches to test - comment/uncomment different approaches:
+        //
+        // APPROACH 1: Direct passthrough (for comparison)
+        // Replace the finalColor line with: let finalColor = rawColor.rgb;
+        //
+        // APPROACH 2: Simple TV range expansion (most likely fix)
+        // Replace the finalColor lines with:
+        // let finalColor = tvRangeToFullRange(rawColor.rgb);
+        //
+        // APPROACH 3: Full color space conversion (current implementation)
+        // Keep the current implementation
+        //
+        // APPROACH 4: Gamma-only correction (if TV range is not the issue)
+        // Replace the finalColor lines with:
+        let finalColor = linearToSrgb(rec709ToLinear(rawColor.rgb));
+
+        return vec4<f32>(finalColor, 1.0);
+      }
+    `,
   });
 
   const renderPipeline = device.createRenderPipeline({
@@ -75,124 +171,11 @@ interface RenderingContext {
   video: HTMLVideoElement;
   canvasContext: GPUCanvasContext;
   config: Anime4KConfig | null;
-  colorCorrectionConfig: ColorCorrectionConfig | null;
   renderPipeline: GPURenderPipeline;
   latestFrame: GPUTexture;
-  colorCorrectedTexture: GPUTexture;
   outputTexture: GPUTexture;
   executor: PipelineExecutor;
   renderBindGroup: GPUBindGroup;
-  colorCorrectionPipeline: GPUComputePipeline | null;
-  colorCorrectionBindGroup: GPUBindGroup | null;
-  colorCorrectionUniformBuffer: GPUBuffer | null;
-}
-
-function createColorCorrectionPipeline(
-  device: GPUDevice,
-  inputTexture: GPUTexture,
-  outputTexture: GPUTexture
-): [GPUComputePipeline, GPUBindGroup, GPUBuffer] {
-  const shaderModule = device.createShaderModule({
-    code: colorCorrectionShader,
-  });
-
-  const bindGroupLayout = device.createBindGroupLayout({
-    entries: [
-      {
-        binding: 0,
-        visibility: GPUShaderStage.COMPUTE,
-        texture: {
-          sampleType: "float",
-          viewDimension: "2d",
-        },
-      },
-      {
-        binding: 1,
-        visibility: GPUShaderStage.COMPUTE,
-        storageTexture: {
-          access: "write-only",
-          format: outputTexture.format,
-          viewDimension: "2d",
-        },
-      },
-      {
-        binding: 2,
-        visibility: GPUShaderStage.COMPUTE,
-        buffer: {
-          type: "uniform",
-        },
-      },
-    ],
-  });
-
-  const pipelineLayout = device.createPipelineLayout({
-    bindGroupLayouts: [bindGroupLayout],
-  });
-
-  const computePipeline = device.createComputePipeline({
-    layout: pipelineLayout,
-    compute: {
-      module: shaderModule,
-      entryPoint: "main",
-    },
-  });
-
-  // Create uniform buffer for color correction parameters
-  const uniformBuffer = device.createBuffer({
-    size: 32, // 8 u32 values * 4 bytes
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-
-  const bindGroup = device.createBindGroup({
-    layout: bindGroupLayout,
-    entries: [
-      {
-        binding: 0,
-        resource: inputTexture.createView(),
-      },
-      {
-        binding: 1,
-        resource: outputTexture.createView(),
-      },
-      {
-        binding: 2,
-        resource: {
-          buffer: uniformBuffer,
-        },
-      },
-    ],
-  });
-
-  return [computePipeline, bindGroup, uniformBuffer];
-}
-
-function updateColorCorrectionUniforms(
-  device: GPUDevice,
-  buffer: GPUBuffer,
-  config: ColorCorrectionConfig | null
-): void {
-  const uniforms = new Uint32Array(8);
-
-  if (config?.enabled) {
-    // Map string values to numeric indices
-    const matrixMap = { bt601: 0, bt709: 1, bt2020: 2 };
-    const rangeMap = { limited: 0, full: 1 };
-    const transferMap = { linear: 0, srgb: 1, rec709: 2, "gamma2.2": 3 };
-
-    uniforms[0] = matrixMap[config.sourceYUV] ?? 1; // source_matrix
-    uniforms[1] = matrixMap[config.targetYUV] ?? 1; // target_matrix
-    uniforms[2] = rangeMap[config.sourceRange] ?? 0; // source_range
-    uniforms[3] = rangeMap[config.targetRange] ?? 1; // target_range
-    uniforms[4] = transferMap[config.sourceGamma] ?? 1; // source_transfer
-    uniforms[5] = transferMap[config.targetGamma] ?? 1; // target_transfer
-    uniforms[6] = 1; // enable_correction
-    uniforms[7] = 0; // reserved
-  } else {
-    // Passthrough mode
-    uniforms.fill(0);
-  }
-
-  device.queue.writeBuffer(buffer, 0, uniforms);
 }
 
 async function createContext(
@@ -201,8 +184,7 @@ async function createContext(
   video: HTMLVideoElement,
   canvas: HTMLCanvasElement,
   canvasContext: GPUCanvasContext,
-  config: Anime4KConfig | null,
-  colorCorrectionConfig: ColorCorrectionConfig | null
+  config: Anime4KConfig | null
 ): Promise<RenderingContext> {
   // Update canvas dimensions
   const effectiveScale = Math.max(config?.scale ?? 1, 1);
@@ -217,22 +199,12 @@ async function createContext(
     colorSpace: "display-p3",
   });
 
-  // Create a new texture for the latest frame (input to color correction)
+  // Create a new texture for the latest frame (input to Anime4K)
   const latestFrame = device.createTexture({
     size: [video.videoWidth, video.videoHeight],
-    format: "rgba8unorm", // Keep unorm for compatibility
+    format: "rgba8unorm", // Keep unorm for Anime4K compatibility
     usage:
       GPUTextureUsage.COPY_DST |
-      GPUTextureUsage.STORAGE_BINDING |
-      GPUTextureUsage.TEXTURE_BINDING |
-      GPUTextureUsage.RENDER_ATTACHMENT,
-  });
-
-  // Create a texture for color corrected output (input to Anime4K)
-  const colorCorrectedTexture = device.createTexture({
-    size: [video.videoWidth, video.videoHeight],
-    format: "rgba32float", // Use float for better precision in Anime4K pipeline
-    usage:
       GPUTextureUsage.STORAGE_BINDING |
       GPUTextureUsage.TEXTURE_BINDING |
       GPUTextureUsage.RENDER_ATTACHMENT,
@@ -257,25 +229,11 @@ async function createContext(
   let executor: PipelineExecutor;
   let outputTexture: GPUTexture;
 
-  // Create color correction pipeline
-  let colorCorrectionPipeline: GPUComputePipeline | null = null;
-  let colorCorrectionBindGroup: GPUBindGroup | null = null;
-  let colorCorrectionUniformBuffer: GPUBuffer | null = null;
-
-  if (colorCorrectionConfig?.enabled) {
-    [colorCorrectionPipeline, colorCorrectionBindGroup, colorCorrectionUniformBuffer] = 
-      createColorCorrectionPipeline(device, latestFrame, colorCorrectedTexture);
-    updateColorCorrectionUniforms(device, colorCorrectionUniformBuffer, colorCorrectionConfig);
-  }
-
-  // Use color corrected texture as input to Anime4K if color correction is enabled
-  const anime4kInputTexture = colorCorrectionConfig?.enabled ? colorCorrectedTexture : latestFrame;
-
   try {
     [executor, outputTexture] = await createPipelineExecutor(
       executablePipelines,
       device,
-      anime4kInputTexture
+      latestFrame
     );
   } catch (error) {
     console.error("❌ Failed to create pipeline executor:", error);
@@ -304,38 +262,25 @@ async function createContext(
     video,
     canvasContext,
     config,
-    colorCorrectionConfig,
     renderPipeline,
     latestFrame,
-    colorCorrectedTexture,
     outputTexture,
     executor,
     renderBindGroup,
-    colorCorrectionPipeline,
-    colorCorrectionBindGroup,
-    colorCorrectionUniformBuffer,
   };
 }
 
 function shouldRecreateContext(
   context: RenderingContext,
   video: HTMLVideoElement,
-  config: Anime4KConfig | null,
-  colorCorrectionConfig: ColorCorrectionConfig | null
+  config: Anime4KConfig | null
 ): boolean {
   return (
     context.latestFrame.width !== video.videoWidth ||
     context.latestFrame.height !== video.videoHeight ||
     context.config?.preset !== config?.preset ||
     context.config?.performance !== config?.performance ||
-    context.config?.scale !== config?.scale ||
-    context.colorCorrectionConfig?.enabled !== colorCorrectionConfig?.enabled ||
-    context.colorCorrectionConfig?.sourceYUV !== colorCorrectionConfig?.sourceYUV ||
-    context.colorCorrectionConfig?.targetYUV !== colorCorrectionConfig?.targetYUV ||
-    context.colorCorrectionConfig?.sourceRange !== colorCorrectionConfig?.sourceRange ||
-    context.colorCorrectionConfig?.targetRange !== colorCorrectionConfig?.targetRange ||
-    context.colorCorrectionConfig?.sourceGamma !== colorCorrectionConfig?.sourceGamma ||
-    context.colorCorrectionConfig?.targetGamma !== colorCorrectionConfig?.targetGamma
+    context.config?.scale !== config?.scale
   );
 }
 
@@ -345,25 +290,18 @@ function cleanupContext(context?: RenderingContext | null): void {
   }
 
   context.latestFrame.destroy();
-  context.colorCorrectedTexture.destroy();
   context.outputTexture.destroy();
   context.executor.cleanup();
-  context.colorCorrectionUniformBuffer?.destroy();
 }
 
 function render({
   device,
   video,
   latestFrame,
-  colorCorrectedTexture,
   executor,
   canvasContext,
   renderPipeline,
   renderBindGroup,
-  colorCorrectionPipeline,
-  colorCorrectionBindGroup,
-  colorCorrectionUniformBuffer,
-  colorCorrectionConfig,
 }: RenderingContext): void {
   // Copy the external texture to the latestFrame
   // Preserve original color space and range
@@ -378,22 +316,8 @@ function render({
     [video.videoWidth, video.videoHeight]
   );
 
-  // Use a single command encoder for color correction and Anime4K pipeline
+  // Use a single command encoder for both conversion and Anime4K pipeline
   const mainEncoder = device.createCommandEncoder();
-
-  // Execute color correction if enabled
-  if (colorCorrectionConfig?.enabled && colorCorrectionPipeline && colorCorrectionBindGroup) {
-    const colorCorrectionPass = mainEncoder.beginComputePass();
-    colorCorrectionPass.setPipeline(colorCorrectionPipeline);
-    colorCorrectionPass.setBindGroup(0, colorCorrectionBindGroup);
-    
-    const workgroupsX = Math.ceil(video.videoWidth / 8);
-    const workgroupsY = Math.ceil(video.videoHeight / 8);
-    colorCorrectionPass.dispatchWorkgroups(workgroupsX, workgroupsY);
-    colorCorrectionPass.end();
-  }
-
-  // Execute Anime4K pipeline
   executePipeline(executor, mainEncoder);
   device.queue.submit([mainEncoder.finish()]);
 
@@ -429,20 +353,18 @@ function render({
 export interface Anime4KController {
   ready: Promise<void>;
   cleanup: () => void;
-  updateConfig: (config: Anime4KConfig | null, colorCorrectionConfig?: ColorCorrectionConfig | null) => void;
+  updateConfig: (config: Anime4KConfig | null) => void;
 }
 
 export function setupAnime4K(
   canvas: HTMLCanvasElement,
   video: HTMLVideoElement,
-  config: Anime4KConfig | null = null,
-  colorCorrectionConfig: ColorCorrectionConfig | null = null
+  config: Anime4KConfig | null = null
 ): Anime4KController {
   const abortController = new AbortController();
   const { signal } = abortController;
 
   let currentConfig: Anime4KConfig | null = config && { ...config };
-  let currentColorCorrectionConfig: ColorCorrectionConfig | null = colorCorrectionConfig && { ...colorCorrectionConfig };
   let contextPromise: Promise<RenderingContext> | null = null;
   let timerId: number | null = null;
   let onConfigUpdate: (() => void) | null = null;
@@ -480,8 +402,7 @@ export function setupAnime4K(
         video,
         canvas,
         canvasContext,
-        currentConfig,
-        currentColorCorrectionConfig
+        currentConfig
       ).catch((error): never => {
         console.error("❌ Failed to create rendering context:", error);
         contextPromise = null;
@@ -516,7 +437,7 @@ export function setupAnime4K(
       contextPromise ??= createNewContext();
       contextPromise
         .then((context) => {
-          if (!shouldRecreateContext(context, video, currentConfig, currentColorCorrectionConfig)) {
+          if (!shouldRecreateContext(context, video, currentConfig)) {
             return context;
           }
 
@@ -575,9 +496,8 @@ export function setupAnime4K(
   return {
     ready: init(),
     cleanup,
-    updateConfig: (config, colorCorrectionConfig): void => {
+    updateConfig: (config): void => {
       currentConfig = config && { ...config };
-      currentColorCorrectionConfig = colorCorrectionConfig ? { ...colorCorrectionConfig } : null;
       onConfigUpdate?.();
     },
   };

@@ -1,4 +1,4 @@
-import type { Anime4KConfig, ColorCorrectionConfig } from "../anime4k/player";
+import type { Anime4KConfig } from "../anime4k/player";
 import type {
   Anime4KPerformancePreset,
   Anime4KPreset,
@@ -40,34 +40,6 @@ export const DEFAULT_CONFIG: Anime4KConfig = {
   performance: "medium",
   scale: 2,
 };
-
-export const DEFAULT_COLOR_CORRECTION_CONFIG: ColorCorrectionConfig = {
-  enabled: false,
-  sourceYUV: "bt709",
-  targetYUV: "bt709",
-  sourceRange: "limited",
-  targetRange: "full",
-  sourceGamma: "rec709",
-  targetGamma: "srgb",
-};
-
-export const YUV_STANDARDS = [
-  { value: "bt601" as const, label: "BT.601 (SDTV)" },
-  { value: "bt709" as const, label: "BT.709 (HDTV)" },
-  { value: "bt2020" as const, label: "BT.2020 (UHDTV)" },
-];
-
-export const RANGE_TYPES = [
-  { value: "limited" as const, label: "Limited (TV/Studio Range)" },
-  { value: "full" as const, label: "Full (PC Range)" },
-];
-
-export const GAMMA_TYPES = [
-  { value: "linear" as const, label: "Linear" },
-  { value: "srgb" as const, label: "sRGB" },
-  { value: "rec709" as const, label: "Rec.709" },
-  { value: "gamma2.2" as const, label: "Gamma 2.2" },
-];
 
 export const COMPARE_MODES: readonly {
   value: CompareConfig["mode"];

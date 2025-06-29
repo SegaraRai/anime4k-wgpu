@@ -1,16 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
-import type { Anime4KConfig, ColorCorrectionConfig } from "../anime4k/player";
+import type { Anime4KConfig } from "../anime4k/player";
 import {
-  DEFAULT_COLOR_CORRECTION_CONFIG,
   DEFAULT_COMPARE,
   DEFAULT_CONFIG,
-  GAMMA_TYPES,
   MAX_SCALE_FACTOR,
   MIN_SCALE_FACTOR,
   PERFORMANCE_PRESETS,
   PRESETS,
-  RANGE_TYPES,
-  YUV_STANDARDS,
   type CompareConfig,
 } from "./constants";
 import { VideoPlayer } from "./VideoPlayer";
@@ -19,8 +15,6 @@ export function VideoPlayerPage() {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [enabled, setEnabled] = useState<boolean>(true);
   const [config, setConfig] = useState<Anime4KConfig>(DEFAULT_CONFIG);
-  const [colorCorrectionConfig, setColorCorrectionConfig] =
-    useState<ColorCorrectionConfig>(DEFAULT_COLOR_CORRECTION_CONFIG);
   const [compare, setCompare] = useState<CompareConfig>(DEFAULT_COMPARE);
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -100,15 +94,6 @@ export function VideoPlayerPage() {
       setEnabled(false);
     }
   }, []);
-
-  const handleUpdateColorCorrection = useCallback(
-    (newConfig: ColorCorrectionConfig | null) => {
-      if (newConfig) {
-        setColorCorrectionConfig(newConfig);
-      }
-    },
-    []
-  );
 
   const onLoadedMetadata = useCallback((event: Event) => {
     // Update the scale factor based on the video dimensions and the current viewport size in physical pixels
@@ -371,237 +356,6 @@ export function VideoPlayerPage() {
                   </div>
                 </div>
 
-                {/* Color Correction Settings */}
-                <div class="mt-6">
-                  <h4 class="text-lg font-medium mb-3">Color Correction</h4>
-
-                  {/* Color Correction Enable/Disable */}
-                  <div class="form-control mb-4">
-                    <label class="label cursor-pointer justify-start gap-3">
-                      <input
-                        type="checkbox"
-                        class="toggle toggle-secondary"
-                        checked={colorCorrectionConfig.enabled}
-                        onChange={(event) => {
-                          setColorCorrectionConfig({
-                            ...colorCorrectionConfig,
-                            enabled: event.currentTarget.checked,
-                          });
-                        }}
-                      />
-                      <span class="label-text text-base font-medium text-base-content">
-                        Enable Color Correction
-                      </span>
-                    </label>
-                  </div>
-
-                  {/* Color Correction Options */}
-                  <div
-                    class={`grid grid-cols-1 md:grid-cols-2 gap-4 ${!colorCorrectionConfig.enabled ? "opacity-50 pointer-events-none" : ""}`}
-                  >
-                    {/* Source Settings */}
-                    <div class="space-y-4">
-                      <h5 class="font-medium text-secondary">Source (Input)</h5>
-
-                      <fieldset class="fieldset">
-                        <legend class="fieldset-legend">Color Space</legend>
-                        <select
-                          class="w-full select select-bordered select-sm"
-                          value={colorCorrectionConfig.sourceYUV}
-                          disabled={!colorCorrectionConfig.enabled}
-                          onChange={(e) => {
-                            setColorCorrectionConfig({
-                              ...colorCorrectionConfig,
-                              sourceYUV: (e.target as HTMLSelectElement)
-                                .value as any,
-                            });
-                          }}
-                        >
-                          {YUV_STANDARDS.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </fieldset>
-
-                      <fieldset class="fieldset">
-                        <legend class="fieldset-legend">Range</legend>
-                        <select
-                          class="w-full select select-bordered select-sm"
-                          value={colorCorrectionConfig.sourceRange}
-                          disabled={!colorCorrectionConfig.enabled}
-                          onChange={(e) => {
-                            setColorCorrectionConfig({
-                              ...colorCorrectionConfig,
-                              sourceRange: (e.target as HTMLSelectElement)
-                                .value as any,
-                            });
-                          }}
-                        >
-                          {RANGE_TYPES.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </fieldset>
-
-                      <fieldset class="fieldset">
-                        <legend class="fieldset-legend">Gamma</legend>
-                        <select
-                          class="w-full select select-bordered select-sm"
-                          value={colorCorrectionConfig.sourceGamma}
-                          disabled={!colorCorrectionConfig.enabled}
-                          onChange={(e) => {
-                            setColorCorrectionConfig({
-                              ...colorCorrectionConfig,
-                              sourceGamma: (e.target as HTMLSelectElement)
-                                .value as any,
-                            });
-                          }}
-                        >
-                          {GAMMA_TYPES.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </fieldset>
-                    </div>
-
-                    {/* Target Settings */}
-                    <div class="space-y-4">
-                      <h5 class="font-medium text-secondary">
-                        Target (Output)
-                      </h5>
-
-                      <fieldset class="fieldset">
-                        <legend class="fieldset-legend">Color Space</legend>
-                        <select
-                          class="w-full select select-bordered select-sm"
-                          value={colorCorrectionConfig.targetYUV}
-                          disabled={!colorCorrectionConfig.enabled}
-                          onChange={(e) => {
-                            setColorCorrectionConfig({
-                              ...colorCorrectionConfig,
-                              targetYUV: (e.target as HTMLSelectElement)
-                                .value as any,
-                            });
-                          }}
-                        >
-                          {YUV_STANDARDS.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </fieldset>
-
-                      <fieldset class="fieldset">
-                        <legend class="fieldset-legend">Range</legend>
-                        <select
-                          class="w-full select select-bordered select-sm"
-                          value={colorCorrectionConfig.targetRange}
-                          disabled={!colorCorrectionConfig.enabled}
-                          onChange={(e) => {
-                            setColorCorrectionConfig({
-                              ...colorCorrectionConfig,
-                              targetRange: (e.target as HTMLSelectElement)
-                                .value as any,
-                            });
-                          }}
-                        >
-                          {RANGE_TYPES.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </fieldset>
-
-                      <fieldset class="fieldset">
-                        <legend class="fieldset-legend">Gamma</legend>
-                        <select
-                          class="w-full select select-bordered select-sm"
-                          value={colorCorrectionConfig.targetGamma}
-                          disabled={!colorCorrectionConfig.enabled}
-                          onChange={(e) => {
-                            setColorCorrectionConfig({
-                              ...colorCorrectionConfig,
-                              targetGamma: (e.target as HTMLSelectElement)
-                                .value as any,
-                            });
-                          }}
-                        >
-                          {GAMMA_TYPES.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </fieldset>
-                    </div>
-                  </div>
-
-                  {/* Color Correction Info */}
-                  <div class="alert alert-info alert-soft mt-4">
-                    <div class="text-sm">
-                      {colorCorrectionConfig.enabled ? (
-                        <>
-                          <strong>Color correction enabled:</strong> Converting
-                          from{" "}
-                          {
-                            YUV_STANDARDS.find(
-                              (s) => s.value === colorCorrectionConfig.sourceYUV
-                            )?.label
-                          }{" "}
-                          (
-                          {
-                            RANGE_TYPES.find(
-                              (r) =>
-                                r.value === colorCorrectionConfig.sourceRange
-                            )?.label.split(" ")[0]
-                          }
-                          ,{" "}
-                          {
-                            GAMMA_TYPES.find(
-                              (g) =>
-                                g.value === colorCorrectionConfig.sourceGamma
-                            )?.label
-                          }
-                          ) to{" "}
-                          {
-                            YUV_STANDARDS.find(
-                              (s) => s.value === colorCorrectionConfig.targetYUV
-                            )?.label
-                          }{" "}
-                          (
-                          {
-                            RANGE_TYPES.find(
-                              (r) =>
-                                r.value === colorCorrectionConfig.targetRange
-                            )?.label.split(" ")[0]
-                          }
-                          ,{" "}
-                          {
-                            GAMMA_TYPES.find(
-                              (g) =>
-                                g.value === colorCorrectionConfig.targetGamma
-                            )?.label
-                          }
-                          )
-                        </>
-                      ) : (
-                        <>
-                          Color correction is <strong>disabled</strong>. Input
-                          will be passed through unchanged.
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
                 {/* Keyboard Shortcuts */}
                 <div class="mt-6">
                   <h4 class="text-lg font-medium mb-3">Keyboard Shortcuts</h4>
@@ -688,10 +442,8 @@ export function VideoPlayerPage() {
           <VideoPlayer
             src={selectedFile}
             config={enabled ? config : null}
-            colorCorrectionConfig={colorCorrectionConfig}
             compare={compare}
             onUpdateConfig={handleUpdateConfig}
-            onUpdateColorCorrection={handleUpdateColorCorrection}
             onUpdateCompare={setCompare}
             onLoadedMetadata={onLoadedMetadata}
           />
