@@ -54,6 +54,27 @@ anime4k-wgpu/
 
 ## Quick Start
 
+### Web Demo
+
+Experience Anime4K-wgpu directly in your browser! The web demo provides an interactive interface for real-time video upscaling using WebGPU.
+
+🌐 **Live Demo**: [anime4k-wgpu.roundtrip.dev](https://anime4k-wgpu.roundtrip.dev)
+
+**Features:**
+
+- Drag-and-drop video file support
+- Real-time Anime4K processing using WebGPU
+- Multiple presets and performance levels
+- Before/after comparison modes
+- Full keyboard controls
+
+**Requirements:**
+
+- WebGPU-compatible browser (Chrome 113+, Firefox Nightly, Safari Technology Preview)
+- Modern GPU with WebGPU support
+
+For more details, see the [Web Demo README](web-demo-src/README.md).
+
 ### Prerequisites
 
 - Rust (2024 edition)

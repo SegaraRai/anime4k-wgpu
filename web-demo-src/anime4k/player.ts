@@ -289,24 +289,26 @@ export function setupAnime4K(
     }
 
     const contextInit = createContextInit(device);
-    const createNewContext = (): Promise<RenderingContext> => {
+    const createNewContext = async (): Promise<RenderingContext> => {
       if (signal.aborted) {
         throw new Error("Aborted");
       }
 
-      return createContext(
-        device,
-        contextInit,
-        video,
-        canvas,
-        canvasContext,
-        currentConfig
-      ).catch((error): never => {
+      try {
+        return await createContext(
+          device,
+          contextInit,
+          video,
+          canvas,
+          canvasContext,
+          currentConfig
+        );
+      } catch (error) {
         console.error("❌ Failed to create rendering context:", error);
         contextPromise = null;
 
         throw error;
-      });
+      }
     };
 
     const ensureContextAndRender = (): void => {
@@ -373,8 +375,8 @@ export function setupAnime4K(
     };
 
     const onNewVideoFrame = (
-      now: number,
-      metadata: VideoFrameCallbackMetadata
+      _now: number,
+      _metadata: VideoFrameCallbackMetadata
     ): void => {
       timerId = null;
       ensureContextAndRender();
