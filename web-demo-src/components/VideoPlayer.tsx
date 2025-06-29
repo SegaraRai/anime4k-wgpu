@@ -64,7 +64,7 @@ export function VideoPlayer({
   }, [canvas, video]);
 
   useEffect(() => {
-    if (!controllerState || !config) {
+    if (!controllerState) {
       return;
     }
 

@@ -8,7 +8,6 @@ import {
   type Anime4KPreset,
   type Anime4KPerformancePreset,
 } from "./presets";
-import predefinedPipelines from "./predefinedPipelines.json" with { type: "json" };
 import renderShader from "./render.wgsl?raw";
 
 export interface Anime4KConfig {
@@ -18,8 +17,8 @@ export interface Anime4KConfig {
 }
 
 interface RenderingContextInit {
-  renderPipeline: GPURenderPipeline;
-  renderSampler: GPUSampler;
+  readonly renderPipeline: GPURenderPipeline;
+  readonly renderSampler: GPUSampler;
 }
 
 function createContextInit(device: GPUDevice): RenderingContextInit {
@@ -60,15 +59,15 @@ function createContextInit(device: GPUDevice): RenderingContextInit {
 }
 
 interface RenderingContext {
-  device: GPUDevice;
-  video: HTMLVideoElement;
-  canvasContext: GPUCanvasContext;
-  config: Anime4KConfig | null;
-  renderPipeline: GPURenderPipeline;
-  latestFrame: GPUTexture;
-  outputTexture: GPUTexture;
-  executor: PipelineExecutor;
-  renderBindGroup: GPUBindGroup;
+  readonly device: GPUDevice;
+  readonly video: HTMLVideoElement;
+  readonly canvasContext: GPUCanvasContext;
+  readonly config: Anime4KConfig | null;
+  readonly renderPipeline: GPURenderPipeline;
+  readonly latestFrame: GPUTexture;
+  readonly outputTexture: GPUTexture;
+  readonly executor: PipelineExecutor;
+  readonly renderBindGroup: GPUBindGroup;
 }
 
 async function createContext(
@@ -107,6 +106,8 @@ async function createContext(
   const pipelineIds = config
     ? createPipelines(config.preset, config.performance, config.scale)
     : [];
+
+  const predefinedPipelines = await import("./predefinedPipelines.json");
 
   const executablePipelines = pipelineIds.map(
     (id) => (predefinedPipelines as any)[id]
@@ -289,6 +290,10 @@ export function setupAnime4K(
 
     const contextInit = createContextInit(device);
     const createNewContext = (): Promise<RenderingContext> => {
+      if (signal.aborted) {
+        throw new Error("Aborted");
+      }
+
       return createContext(
         device,
         contextInit,
@@ -330,7 +335,10 @@ export function setupAnime4K(
       contextPromise ??= createNewContext();
       contextPromise
         .then((context) => {
-          if (!shouldRecreateContext(context, video, currentConfig)) {
+          if (
+            signal.aborted ||
+            !shouldRecreateContext(context, video, currentConfig)
+          ) {
             return context;
           }
 
@@ -339,13 +347,26 @@ export function setupAnime4K(
           return contextPromise;
         })
         .then((context) => {
+          if (signal.aborted) {
+            cleanupContext(context);
+            return;
+          }
+
           // Render the frame
           render(context);
         })
         .catch((error) => {
+          if (signal.aborted) {
+            return;
+          }
+
           console.error("❌ Failed to render video frame:", error);
         })
         .finally(() => {
+          if (signal.aborted) {
+            return;
+          }
+
           // Request the next frame
           timerId = video.requestVideoFrameCallback(onNewVideoFrame);
         });
