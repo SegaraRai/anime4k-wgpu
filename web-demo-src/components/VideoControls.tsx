@@ -752,7 +752,19 @@ export function VideoControls({
                   <span class="size-5 icon-[akar-icons--full-screen]"></span>
                 </button>
                 {/* Comparison Mode */}
-                <div class="dropdown dropdown-top dropdown-end">
+                <div
+                  class="dropdown dropdown-top dropdown-end"
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === "ArrowLeft" ||
+                      event.key === "ArrowRight" ||
+                      event.key === "ArrowUp" ||
+                      event.key === "ArrowDown"
+                    ) {
+                      event.stopPropagation();
+                    }
+                  }}
+                >
                   <div
                     tabindex={0}
                     role="button"
@@ -780,7 +792,19 @@ export function VideoControls({
                   </ul>
                 </div>
                 {/* Menu */}
-                <div class="dropdown dropdown-top dropdown-end">
+                <div
+                  class="dropdown dropdown-top dropdown-end"
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === "ArrowLeft" ||
+                      event.key === "ArrowRight" ||
+                      event.key === "ArrowUp" ||
+                      event.key === "ArrowDown"
+                    ) {
+                      event.stopPropagation();
+                    }
+                  }}
+                >
                   <div
                     tabindex={0}
                     role="button"
@@ -807,7 +831,7 @@ export function VideoControls({
                             }
                           }}
                         />
-                        Enable Anime4K
+                        <span>Enable Anime4K</span>
                       </label>
                       <fieldset class="fieldset" disabled={!config}>
                         <legend class="fieldset-legend">Scale Factor</legend>
