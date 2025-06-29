@@ -591,6 +591,7 @@ export function VideoControls({
         class="absolute inset-0 focus:!outline-none opacity-0"
         aria-label="Play/Pause"
         onClick={togglePlayPause}
+        onDblClick={toggleFullscreen}
       />
       <div
         class="contents"
