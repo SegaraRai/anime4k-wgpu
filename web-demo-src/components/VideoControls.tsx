@@ -205,7 +205,7 @@ export function CompareController({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [draggingRatio, setDraggingRatio] = useState<number | null>(null);
-  const [containerRect, setSliderRect] = useState<DOMRect | null>(null);
+  const [containerRect, setContainerRect] = useState<DOMRect | null>(null);
 
   useEffect(() => {
     if (draggingRatio == null || containerRect == null) {
@@ -244,7 +244,7 @@ export function CompareController({
           ratio: draggingRatio,
         });
         setDraggingRatio(null);
-        setSliderRect(null);
+        setContainerRect(null);
       },
       { signal }
     );
@@ -262,7 +262,7 @@ export function CompareController({
 
       const rect = containerRef.current.getBoundingClientRect();
       setDraggingRatio(calcRatio(mode, rect, event));
-      setSliderRect(rect);
+      setContainerRect(rect);
     },
     [mode]
   );
