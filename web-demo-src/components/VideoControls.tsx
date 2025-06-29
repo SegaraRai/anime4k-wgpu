@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
-import type { Anime4KConfig } from "../anime4k/player";
+import type { Anime4KConfig, ColorCorrectionConfig } from "../anime4k/player";
 import type {
   Anime4KPerformancePreset,
   Anime4KPreset,
@@ -7,6 +7,10 @@ import type {
 import {
   COMPARE_MODES,
   DEFAULT_CONFIG,
+  DEFAULT_COLOR_CORRECTION_CONFIG,
+  YUV_STANDARDS,
+  RANGE_TYPES,
+  GAMMA_TYPES,
   MAX_SCALE_FACTOR,
   MIN_SCALE_FACTOR,
   PERFORMANCE_PRESETS,
@@ -331,15 +335,21 @@ export function CompareController({
 export function VideoControls({
   video,
   config,
+  colorCorrectionConfig,
   compare,
   onUpdateConfig,
+  onUpdateColorCorrection,
   onUpdateCompare,
   onFullscreen,
 }: {
   readonly video: HTMLVideoElement;
   readonly config: Anime4KConfig | null;
+  readonly colorCorrectionConfig: ColorCorrectionConfig | null;
   readonly compare: CompareConfig;
   readonly onUpdateConfig: (config: Anime4KConfig | null) => void;
+  readonly onUpdateColorCorrection: (
+    config: ColorCorrectionConfig | null
+  ) => void;
   readonly onUpdateCompare: (compare: CompareConfig) => void;
   readonly onFullscreen: () => void;
 }) {
@@ -348,6 +358,13 @@ export function VideoControls({
   const [lastConfig, setLastConfig] = useState<Anime4KConfig | null>(null);
   const displayConfig = config ?? lastConfig ?? DEFAULT_CONFIG;
 
+  const [lastColorCorrectionConfig, setLastColorCorrectionConfig] =
+    useState<ColorCorrectionConfig | null>(null);
+  const displayColorCorrectionConfig =
+    colorCorrectionConfig ??
+    lastColorCorrectionConfig ??
+    DEFAULT_COLOR_CORRECTION_CONFIG;
+
   if (
     config &&
     (config.preset !== displayConfig.preset ||
@@ -355,6 +372,25 @@ export function VideoControls({
       config.scale !== displayConfig.scale)
   ) {
     setLastConfig(config);
+  }
+
+  if (
+    colorCorrectionConfig &&
+    (colorCorrectionConfig.enabled !== displayColorCorrectionConfig.enabled ||
+      colorCorrectionConfig.sourceYUV !==
+        displayColorCorrectionConfig.sourceYUV ||
+      colorCorrectionConfig.targetYUV !==
+        displayColorCorrectionConfig.targetYUV ||
+      colorCorrectionConfig.sourceRange !==
+        displayColorCorrectionConfig.sourceRange ||
+      colorCorrectionConfig.targetRange !==
+        displayColorCorrectionConfig.targetRange ||
+      colorCorrectionConfig.sourceGamma !==
+        displayColorCorrectionConfig.sourceGamma ||
+      colorCorrectionConfig.targetGamma !==
+        displayColorCorrectionConfig.targetGamma)
+  ) {
+    setLastColorCorrectionConfig(colorCorrectionConfig);
   }
 
   const updateConfig = useCallback(
@@ -381,6 +417,32 @@ export function VideoControls({
       toast.showToast(message);
     },
     [onUpdateConfig, toast]
+  );
+
+  const updateColorCorrectionConfig = useCallback(
+    (newConfig: ColorCorrectionConfig | null): void => {
+      if (newConfig) {
+        setLastColorCorrectionConfig(newConfig);
+      }
+      onUpdateColorCorrection(newConfig);
+
+      // Show toast notification
+      let message: string;
+      if (newConfig === null || !newConfig.enabled) {
+        message = "Color correction disabled";
+      } else {
+        const sourceSpace =
+          YUV_STANDARDS.find((s) => s.value === newConfig.sourceYUV)?.label ||
+          newConfig.sourceYUV;
+        const targetSpace =
+          YUV_STANDARDS.find((s) => s.value === newConfig.targetYUV)?.label ||
+          newConfig.targetYUV;
+        message = `Color correction enabled: ${sourceSpace} → ${targetSpace}`;
+      }
+
+      toast.showToast(message);
+    },
+    [onUpdateColorCorrection, toast]
   );
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -632,6 +694,7 @@ export function VideoControls({
                       onInput={(event) => {
                         const target = event.target as HTMLInputElement;
                         video.volume = parseFloat(target.value) / 100;
+                        video.muted = false;
                         setVolume(video.volume);
                         setIsMuted(video.muted);
                       }}
@@ -797,6 +860,214 @@ export function VideoControls({
                               key={value}
                               value={value}
                               selected={displayConfig.performance === value}
+                            >
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </fieldset>
+                    </div>
+                  </div>
+                </div>
+                {/* Color Correction Menu */}
+                <div class="dropdown dropdown-top dropdown-end">
+                  <div
+                    tabindex={0}
+                    role="button"
+                    aria-label="Color Correction Settings Menu"
+                    class={`flex-none btn btn-circle btn-ghost btn-neutral btn-md ${colorCorrectionConfig?.enabled ? "text-secondary" : ""}`}
+                  >
+                    <span class="size-5 icon-[akar-icons--align-bottom]"></span>
+                  </div>
+                  <div
+                    tabindex={0}
+                    class="card card-sm dropdown-content bg-base-100 rounded-box z-1 w-72 shadow-sm"
+                  >
+                    <div tabindex={0} class="card-body">
+                      <label class="label text-sm text-base-content">
+                        <input
+                          type="checkbox"
+                          class="toggle toggle-secondary"
+                          checked={displayColorCorrectionConfig.enabled}
+                          onChange={(event) => {
+                            updateColorCorrectionConfig({
+                              ...displayColorCorrectionConfig,
+                              enabled: event.currentTarget.checked,
+                            });
+                          }}
+                        />
+                        Enable Color Correction
+                      </label>
+
+                      <div class="divider my-2">Source (Input)</div>
+
+                      <fieldset
+                        class="fieldset"
+                        disabled={!displayColorCorrectionConfig.enabled}
+                      >
+                        <legend class="fieldset-legend">Color Space</legend>
+                        <select
+                          class="select select-sm"
+                          onChange={(event) => {
+                            updateColorCorrectionConfig({
+                              ...displayColorCorrectionConfig,
+                              sourceYUV: event.currentTarget.value as any,
+                            });
+                          }}
+                        >
+                          {YUV_STANDARDS.map(({ value, label }) => (
+                            <option
+                              key={value}
+                              value={value}
+                              selected={
+                                displayColorCorrectionConfig.sourceYUV === value
+                              }
+                            >
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </fieldset>
+
+                      <fieldset
+                        class="fieldset"
+                        disabled={!displayColorCorrectionConfig.enabled}
+                      >
+                        <legend class="fieldset-legend">Range</legend>
+                        <select
+                          class="select select-sm"
+                          onChange={(event) => {
+                            updateColorCorrectionConfig({
+                              ...displayColorCorrectionConfig,
+                              sourceRange: event.currentTarget.value as any,
+                            });
+                          }}
+                        >
+                          {RANGE_TYPES.map(({ value, label }) => (
+                            <option
+                              key={value}
+                              value={value}
+                              selected={
+                                displayColorCorrectionConfig.sourceRange ===
+                                value
+                              }
+                            >
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </fieldset>
+
+                      <fieldset
+                        class="fieldset"
+                        disabled={!displayColorCorrectionConfig.enabled}
+                      >
+                        <legend class="fieldset-legend">Gamma</legend>
+                        <select
+                          class="select select-sm"
+                          onChange={(event) => {
+                            updateColorCorrectionConfig({
+                              ...displayColorCorrectionConfig,
+                              sourceGamma: event.currentTarget.value as any,
+                            });
+                          }}
+                        >
+                          {GAMMA_TYPES.map(({ value, label }) => (
+                            <option
+                              key={value}
+                              value={value}
+                              selected={
+                                displayColorCorrectionConfig.sourceGamma ===
+                                value
+                              }
+                            >
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </fieldset>
+
+                      <div class="divider my-2">Target (Output)</div>
+
+                      <fieldset
+                        class="fieldset"
+                        disabled={!displayColorCorrectionConfig.enabled}
+                      >
+                        <legend class="fieldset-legend">Color Space</legend>
+                        <select
+                          class="select select-sm"
+                          onChange={(event) => {
+                            updateColorCorrectionConfig({
+                              ...displayColorCorrectionConfig,
+                              targetYUV: event.currentTarget.value as any,
+                            });
+                          }}
+                        >
+                          {YUV_STANDARDS.map(({ value, label }) => (
+                            <option
+                              key={value}
+                              value={value}
+                              selected={
+                                displayColorCorrectionConfig.targetYUV === value
+                              }
+                            >
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </fieldset>
+
+                      <fieldset
+                        class="fieldset"
+                        disabled={!displayColorCorrectionConfig.enabled}
+                      >
+                        <legend class="fieldset-legend">Range</legend>
+                        <select
+                          class="select select-sm"
+                          onChange={(event) => {
+                            updateColorCorrectionConfig({
+                              ...displayColorCorrectionConfig,
+                              targetRange: event.currentTarget.value as any,
+                            });
+                          }}
+                        >
+                          {RANGE_TYPES.map(({ value, label }) => (
+                            <option
+                              key={value}
+                              value={value}
+                              selected={
+                                displayColorCorrectionConfig.targetRange ===
+                                value
+                              }
+                            >
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </fieldset>
+
+                      <fieldset
+                        class="fieldset"
+                        disabled={!displayColorCorrectionConfig.enabled}
+                      >
+                        <legend class="fieldset-legend">Gamma</legend>
+                        <select
+                          class="select select-sm"
+                          onChange={(event) => {
+                            updateColorCorrectionConfig({
+                              ...displayColorCorrectionConfig,
+                              targetGamma: event.currentTarget.value as any,
+                            });
+                          }}
+                        >
+                          {GAMMA_TYPES.map(({ value, label }) => (
+                            <option
+                              key={value}
+                              value={value}
+                              selected={
+                                displayColorCorrectionConfig.targetGamma ===
+                                value
+                              }
                             >
                               {label}
                             </option>

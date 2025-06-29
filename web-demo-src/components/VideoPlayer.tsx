@@ -3,6 +3,7 @@ import {
   setupAnime4K,
   type Anime4KConfig,
   type Anime4KController,
+  type ColorCorrectionConfig,
 } from "../anime4k/player";
 import { VideoControls } from "./VideoControls";
 import type { CompareConfig } from "./constants";
@@ -10,15 +11,21 @@ import type { CompareConfig } from "./constants";
 export function VideoPlayer({
   src,
   config,
+  colorCorrectionConfig,
   compare,
   onUpdateConfig,
+  onUpdateColorCorrection,
   onUpdateCompare,
   onLoadedMetadata,
 }: {
   readonly src: string;
   readonly config: Anime4KConfig | null;
+  readonly colorCorrectionConfig: ColorCorrectionConfig | null;
   readonly compare: CompareConfig;
   readonly onUpdateConfig: (config: Anime4KConfig | null) => void;
+  readonly onUpdateColorCorrection: (
+    config: ColorCorrectionConfig | null
+  ) => void;
   readonly onUpdateCompare: (compare: CompareConfig) => void;
   readonly onLoadedMetadata?: (event: Event) => void;
 }) {
@@ -50,7 +57,12 @@ export function VideoPlayer({
       return;
     }
 
-    const controller = setupAnime4K(canvas, video);
+    const controller = setupAnime4K(
+      canvas,
+      video,
+      config,
+      colorCorrectionConfig
+    );
     setControllerState({
       controller,
       video,
@@ -64,12 +76,12 @@ export function VideoPlayer({
   }, [canvas, video]);
 
   useEffect(() => {
-    if (!controllerState || !config) {
+    if (!controllerState) {
       return;
     }
 
-    controllerState.controller.updateConfig(config);
-  }, [controllerState, config]);
+    controllerState.controller.updateConfig(config, colorCorrectionConfig);
+  }, [controllerState, config, colorCorrectionConfig]);
 
   const handleFullscreen = useCallback((): void => {
     const container = containerRef.current;
@@ -121,8 +133,10 @@ export function VideoPlayer({
         <VideoControls
           video={video}
           config={config}
+          colorCorrectionConfig={colorCorrectionConfig}
           compare={compare}
           onUpdateConfig={onUpdateConfig}
+          onUpdateColorCorrection={onUpdateColorCorrection}
           onUpdateCompare={onUpdateCompare}
           onFullscreen={handleFullscreen}
         />
