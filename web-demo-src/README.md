@@ -26,8 +26,12 @@ This web application provides an interactive demonstration of the Anime4K upscal
 ### Keyboard Shortcuts
 
 - **Space/Enter**: Play/Pause
+- **←/→**: Seek backward/forward by 10 seconds
+- **↑/↓**: Increase/Decrease volume
+- **M**: Toggle mute
 - **F**: Toggle fullscreen
-- **C**: Toggle comparison mode (Shift+C to cycle backwards)
+- **C**: Toggle comparison mode (**Shift+C** to cycle backwards)
+- **O**: Open file dialog to select video
 - **Ctrl+0**: Disable Anime4K processing
 - **Ctrl+1-6**: Switch between Anime4K presets (A, B, C, AA, BB, CA)
 - **Shift+1-5**: Switch performance levels (Light, Medium, High, Ultra, Extreme)

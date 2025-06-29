@@ -16,6 +16,10 @@ import {
 import { Toast } from "./Toast";
 import { useToast } from "./useToast";
 
+const SEEK_OFFSET_DIRECT = 10; // seconds
+const SEEK_OFFSET_SLIDER = 10; // seconds
+const VOLUME_OFFSET = 10;
+
 function formatTime(
   current: number | null,
   duration: number | null
@@ -130,10 +134,10 @@ function Slider({
       ) {
         const offset =
           (
-            { ArrowLeft: -5, ArrowRight: 5 } as Record<
-              string,
-              number | undefined
-            >
+            {
+              ArrowLeft: -SEEK_OFFSET_SLIDER,
+              ArrowRight: SEEK_OFFSET_SLIDER,
+            } as Record<string, number | undefined>
           )[key] ?? 0;
         event.preventDefault();
         setDraggingPosition(
@@ -335,6 +339,7 @@ export function VideoControls({
   onUpdateConfig,
   onUpdateCompare,
   onFullscreen,
+  onSelectFile,
 }: {
   readonly video: HTMLVideoElement;
   readonly config: Anime4KConfig | null;
@@ -342,6 +347,7 @@ export function VideoControls({
   readonly onUpdateConfig: (config: Anime4KConfig | null) => void;
   readonly onUpdateCompare: (compare: CompareConfig) => void;
   readonly onFullscreen: () => void;
+  readonly onSelectFile: () => void;
 }) {
   const toast = useToast();
 
@@ -445,6 +451,28 @@ export function VideoControls({
     }
   }, [video]);
 
+  const updateVolumeTo = useCallback(
+    (volume: number): void => {
+      const newVolume = Math.min(Math.max(Math.round(volume) / 100, 0), 1);
+      video.volume = newVolume;
+      video.muted = newVolume === 0;
+      setVolume(newVolume);
+      setIsMuted(video.muted);
+    },
+    [video]
+  );
+
+  const updateVolumeByOffset = useCallback(
+    (offset: number): void => {
+      if (!offset) {
+        return;
+      }
+
+      updateVolumeTo(Math.round((video.volume ?? 0) * 100 + offset));
+    },
+    [video, updateVolumeTo]
+  );
+
   const toggleFullscreen = useCallback((): void => {
     if (document.fullscreenElement) {
       document.exitFullscreen();
@@ -488,6 +516,37 @@ export function VideoControls({
         case "c":
           event.preventDefault();
           toggleCompare(event.shiftKey);
+          break;
+
+        case "m":
+          event.preventDefault();
+          video.muted = !video.muted;
+          setIsMuted(video.muted);
+          break;
+
+        case "o":
+          event.preventDefault();
+          onSelectFile();
+          break;
+
+        case "arrowleft":
+        case "arrowright":
+          event.preventDefault();
+          if (video.readyState >= 2) {
+            const offset =
+              key === "arrowleft" ? -SEEK_OFFSET_DIRECT : SEEK_OFFSET_DIRECT;
+            const newTime = (seekingTime ?? currentTime ?? 0) + offset;
+            video.currentTime = newTime;
+            setSeekingTime(newTime);
+          }
+          break;
+
+        case "arrowup":
+        case "arrowdown":
+          event.preventDefault();
+          updateVolumeByOffset(
+            key === "arrowup" ? -VOLUME_OFFSET : VOLUME_OFFSET
+          );
           break;
 
         case "0":
@@ -593,7 +652,7 @@ export function VideoControls({
         />
 
         {/* Video Controller */}
-        <div class="pointer-events-none relative bg-gradient-to-t from-[#000000f4] from-10% via-[#000000a0] via-50% opacity-0 group-hover:opacity-100 group-[[data-show-controls]]:opacity-100 has-[.dropdown:focus-within]:opacity-100 transition-opacity duration-400 w-full h-40">
+        <div class="pointer-events-none relative bg-gradient-to-t from-[#000000f4] from-10% via-[#000000a0] via-50% opacity-0 group-hover:opacity-100 group-[[data-show-controls]]:opacity-100 has-[.dropdown:focus-within]:opacity-100 has-[:focus-visible]:opacity-100 transition-opacity duration-400 w-full h-40">
           <div class="pointer-events-auto absolute inset-[auto_0_0_0] flex flex-col justify-between p-4">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-4">
@@ -619,22 +678,43 @@ export function VideoControls({
               </div>
               <div class="flex items-center gap-4">
                 {/* Volume control */}
-                <div class="flex items-center group/volume not-sm:hidden">
+                <div
+                  class="flex items-center group/volume not-sm:hidden"
+                  onWheel={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    updateVolumeByOffset(
+                      Math.sign(event.deltaY) * -VOLUME_OFFSET
+                    );
+                  }}
+                >
                   <div class="w-0 flex items-center group-hover/volume:w-30 focus-within:w-30 rounded-full transition-all">
                     <input
                       type="range"
                       aria-label="Volume"
                       class="w-full range range-xs text-white [--range-bg:#555] [--range-thumb:white] [--range-fill:0]"
-                      value={isMuted ? 0 : volume !== null ? volume * 100 : 100}
+                      value={isMuted ? 0 : volume != null ? volume * 100 : 100}
                       min={0}
                       max={100}
                       step={1}
+                      onKeyDown={(event) => {
+                        const offset = {
+                          ArrowUp: VOLUME_OFFSET,
+                          ArrowDown: -VOLUME_OFFSET,
+                          ArrowLeft: -VOLUME_OFFSET,
+                          ArrowRight: VOLUME_OFFSET,
+                        }[event.key];
+                        if (offset == null) {
+                          return;
+                        }
+                        event.preventDefault();
+                        event.stopPropagation();
+                        updateVolumeByOffset(offset);
+                      }}
                       onInput={(event) => {
-                        const target = event.target as HTMLInputElement;
-                        video.volume = parseFloat(target.value) / 100;
-                        video.muted = false;
-                        setVolume(video.volume);
-                        setIsMuted(video.muted);
+                        updateVolumeTo(
+                          parseFloat((event.target as HTMLInputElement).value)
+                        );
                       }}
                     />
                     <span class="w-2"></span>

@@ -13,6 +13,7 @@ export function VideoPlayer({
   compare,
   onUpdateConfig,
   onUpdateCompare,
+  onSelectFile,
   onLoadedMetadata,
 }: {
   readonly src: string;
@@ -20,6 +21,7 @@ export function VideoPlayer({
   readonly compare: CompareConfig;
   readonly onUpdateConfig: (config: Anime4KConfig | null) => void;
   readonly onUpdateCompare: (compare: CompareConfig) => void;
+  readonly onSelectFile: () => void;
   readonly onLoadedMetadata?: (event: Event) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -125,6 +127,7 @@ export function VideoPlayer({
           onUpdateConfig={onUpdateConfig}
           onUpdateCompare={onUpdateCompare}
           onFullscreen={handleFullscreen}
+          onSelectFile={onSelectFile}
         />
       )}
     </div>

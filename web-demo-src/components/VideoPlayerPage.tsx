@@ -457,6 +457,7 @@ export function VideoPlayerPage() {
             compare={compare}
             onUpdateConfig={handleUpdateConfig}
             onUpdateCompare={setCompare}
+            onSelectFile={handleFileClick}
             onLoadedMetadata={onLoadedMetadata}
           />
         </div>
