@@ -56,34 +56,38 @@ function nanToNull(value: number | null): number | null {
   return value == null || isNaN(value) ? null : value;
 }
 
-function Slider({
+function PlaybackSeekBar({
   current,
   seeking,
+  dragging,
   buffered,
   duration,
-  onChange,
+  onChangeCurrent,
+  onChangeDragging,
+  onChangePaused,
 }: {
   readonly current: number | null;
   readonly seeking: number | null;
+  readonly dragging: number | null;
   readonly buffered: number | null;
   readonly duration: number | null;
-  readonly onChange: (value: number) => void;
+  readonly onChangeCurrent: (value: number) => void;
+  readonly onChangeDragging: (value: number | null) => void;
+  readonly onChangePaused: (paused: boolean) => void;
 }) {
-  const [draggingPosition, setDraggingPosition] = useState<number | null>(null);
-
   const onUpdateDrag = useCallback(
     (value: number): void => {
-      setDraggingPosition(value * (duration ?? 0));
+      onChangeDragging(value * (duration ?? 0));
     },
-    [duration]
+    [duration, onChangeDragging]
   );
 
   const onEndDrag = useCallback(
     (value: number): void => {
-      onChange(value * (duration ?? 0));
-      setDraggingPosition(null);
+      onChangeCurrent(value * (duration ?? 0));
+      onChangeDragging(null);
     },
-    [duration, onChange]
+    [duration, onChangeCurrent, onChangeDragging]
   );
 
   const { handleMouseDown, handleTouchStart } = useDrag(
@@ -102,10 +106,12 @@ function Slider({
       }
 
       const key = event.key;
-      if (draggingPosition != null && (key === "Enter" || key === " ")) {
+      if (dragging != null && (key === "Enter" || key === " ")) {
         event.preventDefault();
-        setDraggingPosition(null);
-        onChange(draggingPosition);
+        event.stopPropagation();
+        onChangeCurrent(dragging);
+        onChangeDragging(null);
+        onChangePaused(false);
       } else if (
         key === "ArrowLeft" ||
         key === "ArrowRight" ||
@@ -120,18 +126,20 @@ function Slider({
             } as Record<string, number | undefined>
           )[key] ?? 0;
         event.preventDefault();
-        setDraggingPosition(
-          (draggingPosition) => (draggingPosition ?? current ?? 0) + offset
+        event.stopPropagation();
+        onChangeDragging(
+          Math.min(Math.max((dragging ?? current ?? 0) + offset, 0), duration)
         );
+        onChangePaused(true);
       }
     },
-    [duration, current, draggingPosition]
+    [duration, current, dragging]
   );
 
   return (
     <div
       class="relative w-full h-4 cursor-pointer group/slider"
-      data-dragging={draggingPosition != null ? 1 : undefined}
+      data-dragging={dragging != null ? 1 : undefined}
       onKeyDown={handleKeyDown}
       onMouseDown={(event) => {
         event.preventDefault();
@@ -160,14 +168,14 @@ function Slider({
           <div
             class="absolute inset-[0_auto_0_0] my-auto h-1 bg-gray-300 rounded-full"
             style={{
-              width: `${((draggingPosition ?? seeking ?? current ?? 0) / duration) * 100}%`,
+              width: `${((dragging ?? seeking ?? current ?? 0) / duration) * 100}%`,
             }}
           />
           <button
             type="button"
             class="absolute top-0 bottom-0 left-0 size-4 bg-white rounded-full -translate-x-2 opacity-0 group-hover/slider:opacity-100 group-focus-within/slider:opacity-100 group-[[data-dragging]]/slider:opacity-100 transition-opacity cursor-pointer"
             style={{
-              left: `${((draggingPosition ?? seeking ?? current ?? 0) / duration) * 100}%`,
+              left: `${((dragging ?? seeking ?? current ?? 0) / duration) * 100}%`,
             }}
           />
         </>
@@ -370,6 +378,7 @@ export function VideoControls({
   const [isMuted, setIsMuted] = useState(true);
   const [currentTime, setCurrentTime] = useState<number | null>(null);
   const [seekingTime, setSeekingTime] = useState<number | null>(null);
+  const [draggingTime, setDraggingTime] = useState<number | null>(null);
   const [duration, setDuration] = useState<number | null>(null);
   const [volume, setVolume] = useState<number | null>(null);
   const [buffered, setBuffered] = useState<number>(0);
@@ -600,7 +609,10 @@ export function VideoControls({
     [compare, onUpdateCompare]
   );
 
-  const [strCurrentTime, strDuration] = formatTime(currentTime, duration);
+  const [strCurrentTime, strDuration] = formatTime(
+    draggingTime ?? seekingTime ?? currentTime,
+    duration
+  );
 
   return (
     <div
@@ -930,14 +942,26 @@ export function VideoControls({
             </div>
             {/* Playback progress */}
             <div class="px-2 pb-2">
-              <Slider
+              <PlaybackSeekBar
                 current={currentTime}
                 seeking={seekingTime}
+                dragging={draggingTime}
                 buffered={buffered}
                 duration={duration}
-                onChange={(value) => {
+                onChangeCurrent={(value) => {
                   video.currentTime = value;
                   setSeekingTime(value);
+                }}
+                onChangeDragging={(value) => {
+                  setDraggingTime(value);
+                }}
+                onChangePaused={(paused) => {
+                  if (paused) {
+                    video.pause();
+                  } else {
+                    video.play();
+                  }
+                  setIsPlaying(!paused);
                 }}
               />
             </div>
