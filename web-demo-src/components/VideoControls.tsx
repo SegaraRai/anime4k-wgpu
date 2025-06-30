@@ -14,7 +14,7 @@ import {
   type CompareConfig,
 } from "./constants";
 import { Toast } from "./Toast";
-import { useDrag } from "./useDrag";
+import { useDrag, willHandleMouseDown, willHandleTouchStart } from "./useDrag";
 import { useIsFullscreen } from "./useIsFullscreen";
 import { useToast } from "./useToast";
 
@@ -142,17 +142,23 @@ function PlaybackSeekBar({
       data-dragging={dragging != null ? 1 : undefined}
       onKeyDown={handleKeyDown}
       onMouseDown={(event) => {
+        if (!willHandleMouseDown(event)) {
+          return;
+        }
         event.preventDefault();
         event.stopPropagation();
         if (duration != null) {
-          handleMouseDown(event.currentTarget, "x", event);
+          handleMouseDown(event, event.currentTarget, "x");
         }
       }}
       onTouchStart={(event) => {
+        if (!willHandleTouchStart(event)) {
+          return;
+        }
         event.preventDefault();
         event.stopPropagation();
         if (duration != null) {
-          handleTouchStart(event.currentTarget, "x", event);
+          handleTouchStart(event, event.currentTarget, "x");
         }
       }}
     >
@@ -271,17 +277,23 @@ export function CompareController({
           type="button"
           class="absolute inset-[var(--inset)] transform-[var(--transform)] m-[var(--margin)] btn btn-circle btn-md btn-soft"
           onMouseDown={(event) => {
+            if (!willHandleMouseDown(event)) {
+              return;
+            }
             event.preventDefault();
             event.stopPropagation();
             if (containerRef.current) {
-              handleMouseDown(containerRef.current, axis, event);
+              handleMouseDown(event, containerRef.current, axis);
             }
           }}
           onTouchStart={(event) => {
+            if (!willHandleTouchStart(event)) {
+              return;
+            }
             event.preventDefault();
             event.stopPropagation();
             if (containerRef.current) {
-              handleTouchStart(containerRef.current, axis, event);
+              handleTouchStart(event, containerRef.current, axis);
             }
           }}
         >

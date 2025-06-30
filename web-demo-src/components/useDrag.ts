@@ -8,15 +8,15 @@ export interface DragOptions {
 
 export interface DragController {
   handleMouseDown: (
+    event: MouseEvent,
     container: HTMLElement,
-    axis: "x" | "y",
-    initialEvent?: MouseEvent
-  ) => void;
+    axis: "x" | "y"
+  ) => boolean;
   handleTouchStart: (
+    event: TouchEvent,
     container: HTMLElement,
-    axis: "x" | "y",
-    initialEvent?: TouchEvent
-  ) => void;
+    axis: "x" | "y"
+  ) => boolean;
 }
 
 interface DraggingContext {
@@ -25,6 +25,14 @@ interface DraggingContext {
   containerRect: DOMRect;
   axis: "x" | "y";
   clamp?: boolean;
+}
+
+export function willHandleMouseDown(event: MouseEvent): boolean {
+  return event.button === 0;
+}
+
+export function willHandleTouchStart(event: TouchEvent): boolean {
+  return event.touches.length === 1;
 }
 
 export function useDrag(options: DragOptions): DragController {
@@ -101,6 +109,11 @@ export function useDrag(options: DragOptions): DragController {
         document.addEventListener(
           "mouseup",
           (event) => {
+            if (event.button !== 0) {
+              // Only handle left mouse button
+              return;
+            }
+
             controller.abort();
 
             const { clientX, clientY } = event;
@@ -180,12 +193,12 @@ export function useDrag(options: DragOptions): DragController {
   );
 
   const handleMouseDown = useCallback(
-    (
-      container: HTMLElement,
-      axis: "x" | "y",
-      initialEvent?: MouseEvent
-    ): void => {
-      startDrag("mouse", container, axis, initialEvent);
+    (event: MouseEvent, container: HTMLElement, axis: "x" | "y"): boolean => {
+      if (!willHandleMouseDown(event)) {
+        return false;
+      }
+
+      startDrag("mouse", container, axis, event);
 
       document.addEventListener(
         "mouseup",
@@ -194,17 +207,19 @@ export function useDrag(options: DragOptions): DragController {
         },
         { once: true }
       );
+
+      return true;
     },
     [startDrag]
   );
 
   const handleTouchStart = useCallback(
-    (
-      container: HTMLElement,
-      axis: "x" | "y",
-      initialEvent?: TouchEvent
-    ): void => {
-      startDrag("touch", container, axis, initialEvent?.touches[0]);
+    (event: TouchEvent, container: HTMLElement, axis: "x" | "y"): boolean => {
+      if (!willHandleTouchStart(event)) {
+        return false;
+      }
+
+      startDrag("touch", container, axis, event.touches[0]);
 
       document.addEventListener(
         "touchend",
@@ -213,6 +228,8 @@ export function useDrag(options: DragOptions): DragController {
         },
         { once: true }
       );
+
+      return true;
     },
     [startDrag]
   );
