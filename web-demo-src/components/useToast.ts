@@ -14,7 +14,7 @@ export function useToast(options: ToastOptions = {}) {
   const currentTimerId = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = useCallback(
-    (newMessage: string) => {
+    (newMessage: string, durationOverride?: number) => {
       if (currentTimerId.current != null) {
         clearTimeout(currentTimerId.current);
         currentTimerId.current = null;
@@ -24,14 +24,17 @@ export function useToast(options: ToastOptions = {}) {
       setIsVisible(true);
 
       // Auto-hide toast after specified duration
-      currentTimerId.current = setTimeout(() => {
-        setIsVisible(false);
+      const effectiveDuration = durationOverride ?? duration;
+      if (effectiveDuration >= 0 && isFinite(effectiveDuration)) {
+        currentTimerId.current = setTimeout(() => {
+          setIsVisible(false);
 
-        currentTimerId.current = setTimeout(
-          () => setMessage(null),
-          fadeOutDuration
-        );
-      }, duration);
+          currentTimerId.current = setTimeout(
+            () => setMessage(null),
+            fadeOutDuration
+          );
+        }, effectiveDuration);
+      }
     },
     [duration, fadeOutDuration]
   );

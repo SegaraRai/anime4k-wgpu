@@ -4,7 +4,7 @@ import {
   type Anime4KConfig,
   type Anime4KController,
 } from "../anime4k/player";
-import { VideoControls } from "./VideoControls";
+import { VideoControls, type Anime4KState } from "./VideoControls";
 import type { CompareConfig } from "./constants";
 
 export function VideoPlayer({
@@ -47,10 +47,16 @@ export function VideoPlayer({
     video: HTMLVideoElement | null;
     canvas: HTMLCanvasElement | null;
   } | null>(null);
+  const [anime4KState, setAnime4KState] = useState<Anime4KState>({
+    type: "pending",
+  });
+
   useEffect(() => {
     if (!canvas || !video) {
       return;
     }
+
+    let cleanuped = false;
 
     const controller = setupAnime4K(canvas, video);
     setControllerState({
@@ -59,9 +65,29 @@ export function VideoPlayer({
       canvas,
     });
 
+    controller.ready.then(
+      () => {
+        if (cleanuped) {
+          console.debug("Anime4K setup was cleaned up before completion.");
+          return;
+        }
+        console.info("✅ Anime4K setup complete");
+        setAnime4KState({ type: "ready" });
+      },
+      (error) => {
+        if (cleanuped) {
+          console.debug("Anime4K setup was cleaned up before error handling.");
+          return;
+        }
+        console.error("❌ Anime4K setup failed:", error);
+        setAnime4KState({ type: "error", error });
+      }
+    );
+
     return (): void => {
       controller.cleanup();
       setControllerState(null);
+      setAnime4KState({ type: "pending" });
     };
   }, [canvas, video]);
 
@@ -128,6 +154,7 @@ export function VideoPlayer({
           video={video}
           config={config}
           compare={compare}
+          anime4KState={anime4KState}
           onUpdateConfig={onUpdateConfig}
           onUpdateCompare={onUpdateCompare}
           onFullscreen={handleFullscreen}
