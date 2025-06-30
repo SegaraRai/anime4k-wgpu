@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import {
   useCallback,
   useEffect,
@@ -15,8 +16,8 @@ import {
   PRESETS,
   type CompareConfig,
 } from "./constants";
-import { VideoPlayer } from "./VideoPlayer";
 import { getBrowserSupportedVideoMediaTypes } from "./videoMediaTypes";
+import { VideoPlayer } from "./VideoPlayer";
 
 export function VideoPlayerPage() {
   const [accept, setAccept] = useState<string>("video/*");
@@ -165,11 +166,12 @@ export function VideoPlayerPage() {
 
             {/* File Input */}
             <label
-              class={`flex flex-col items-center space-y-4 p-8 border-2 border-dashed rounded-lg transition-all duration-200 ${
+              class={clsx(
+                "flex flex-col items-center space-y-4 p-8 border-2 border-dashed rounded-lg transition-all duration-200",
                 isDragOver
                   ? "border-primary bg-primary/10 scale-105"
                   : "border-transparent"
-              }`}
+              )}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
@@ -219,7 +221,10 @@ export function VideoPlayerPage() {
 
                 {/* Anime4K Settings */}
                 <div
-                  class={`mb-6 ${!enabled ? "opacity-50 pointer-events-none" : ""}`}
+                  class={clsx(
+                    "mb-6",
+                    !enabled && "opacity-50 pointer-events-none"
+                  )}
                 >
                   <h4 class="text-lg font-medium mb-3">Anime4K Settings</h4>
                   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">

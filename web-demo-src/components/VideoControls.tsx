@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import type { Anime4KConfig } from "../anime4k/player";
 import type {
@@ -146,6 +147,14 @@ function PlaybackSeekBar({
     <div
       class="relative w-full h-4 cursor-pointer group/slider"
       data-dragging={dragging != null ? 1 : undefined}
+      style={
+        duration != null
+          ? {
+              "--buffered": `${((buffered ?? 0) / duration) * 100}%`,
+              "--current": `${((dragging ?? seeking ?? current ?? 0) / duration) * 100}%`,
+            }
+          : {}
+      }
       onKeyDown={handleKeyDown}
       onMouseDown={(event) => {
         if (!willHandleMouseDown(event)) {
@@ -171,24 +180,11 @@ function PlaybackSeekBar({
       {duration != null && (
         <>
           <div class="absolute w-full h-1 inset-0 my-auto bg-gray-700 rounded-full" />
-          <div
-            class="absolute inset-[0_auto_0_0] my-auto h-1 bg-gray-600 rounded-full"
-            style={{
-              width: `${((buffered ?? 0) / duration) * 100}%`,
-            }}
-          />
-          <div
-            class="absolute inset-[0_auto_0_0] my-auto h-1 bg-gray-300 rounded-full"
-            style={{
-              width: `${((dragging ?? seeking ?? current ?? 0) / duration) * 100}%`,
-            }}
-          />
+          <div class="absolute inset-[0_auto_0_0] my-auto w-[var(--buffered)] h-1 bg-gray-600 rounded-full" />
+          <div class="absolute inset-[0_auto_0_0] my-auto w-[var(--current)] h-1 bg-gray-300 rounded-full" />
           <button
             type="button"
-            class="absolute top-0 bottom-0 left-0 size-4 bg-white rounded-full -translate-x-2 opacity-0 group-hover/slider:opacity-100 group-focus-within/slider:opacity-100 group-[[data-dragging]]/slider:opacity-100 transition-opacity cursor-pointer"
-            style={{
-              left: `${((dragging ?? seeking ?? current ?? 0) / duration) * 100}%`,
-            }}
+            class="absolute top-0 bottom-0 left-[var(--current)] size-4 bg-white rounded-full -translate-x-2 opacity-0 group-hover/slider:opacity-100 group-focus-within/slider:opacity-100 group-[[data-dragging]]/slider:opacity-100 transition-opacity cursor-pointer"
           />
         </>
       )}
@@ -279,7 +275,7 @@ export function CompareController({
   return (
     <div
       ref={containerRef}
-      class={`absolute inset-0 pointer-events-none ${varClass}`}
+      class={clsx("absolute inset-0 pointer-events-none", varClass)}
       style={{ "--ratio": `${ratio * 100}%` }}
     >
       <div class="contents pointer-events-auto">
@@ -308,7 +304,7 @@ export function CompareController({
             }
           }}
         >
-          <span class={`size-5 ${iconClass}`} />
+          <span class={clsx("size-5", iconClass)} />
         </button>
       </div>
     </div>
@@ -671,7 +667,10 @@ export function VideoControls({
 
         {/* Toast Notification about Anime4K State */}
         <Toast
-          class={`alert-soft [--color-base-100:var(--color-base-200)]/80 ${anime4KState.type === "error" ? "alert-error" : "alert-info"}`}
+          class={clsx(
+            "alert-soft [--color-base-100:var(--color-base-200)]/80",
+            anime4KState.type === "error" ? "alert-error" : "alert-info"
+          )}
           align="end"
           message={anime4KStateToast.message}
           isVisible={anime4KStateToast.isVisible}
@@ -690,11 +689,12 @@ export function VideoControls({
                   onClick={togglePlayPause}
                 >
                   <span
-                    class={`size-5 ${
+                    class={clsx(
+                      "size-5",
                       isPlaying
                         ? "icon-[akar-icons--pause]"
                         : "icon-[akar-icons--play]"
-                    }`}
+                    )}
                   />
                 </button>
                 {/* Current time display */}

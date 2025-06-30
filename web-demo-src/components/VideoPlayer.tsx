@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import {
   setupAnime4K,
@@ -110,25 +111,6 @@ export function VideoPlayer({
     }
   }, []);
 
-  const compareStyle = {
-    none: {},
-    onyx: {
-      opacity: compare.ratio,
-    },
-    left: {
-      clipPath: `inset(0 ${100 - compare.ratio * 100}% 0 0)`,
-    },
-    right: {
-      clipPath: `inset(0 0 0 ${100 - compare.ratio * 100}%)`,
-    },
-    top: {
-      clipPath: `inset(0 0 ${100 - compare.ratio * 100}% 0)`,
-    },
-    bottom: {
-      clipPath: `inset(${100 - compare.ratio * 100}% 0 0 0)`,
-    },
-  }[compare.mode];
-
   return (
     <div
       ref={containerRef}
@@ -137,7 +119,10 @@ export function VideoPlayer({
     >
       <video
         ref={videoRefCallback}
-        class="w-full h-full object-contain"
+        class={clsx(
+          "w-full h-full object-contain",
+          compare.mode === "none" && "hidden"
+        )}
         src={src}
         onError={(e) => console.error("❌ Video error:", e)}
         onLoadedMetadata={onLoadedMetadata}
@@ -146,8 +131,21 @@ export function VideoPlayer({
       </video>
       <canvas
         ref={canvasRefCallback}
-        class="absolute w-full h-full inset-0 object-contain pointer-events-none"
-        style={compareStyle}
+        class={clsx(
+          "absolute w-full h-full inset-0 object-contain pointer-events-none",
+          {
+            none: "",
+            onyx: "opacity-[var(--compare-opacity)]",
+            left: "[clip-path:inset(0_var(--compare-clip)_0_0)]",
+            right: "[clip-path:inset(0_0_0_var(--compare-clip))]",
+            top: "[clip-path:inset(0_0_var(--compare-clip)_0)]",
+            bottom: "[clip-path:inset(var(--compare-clip)_0_0_0)]",
+          }[compare.mode]
+        )}
+        style={{
+          "--compare-clip": `${100 - compare.ratio * 100}%`,
+          "--compare-opacity": compare.ratio,
+        }}
       />
       {video && (
         <VideoControls

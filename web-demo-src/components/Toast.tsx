@@ -1,3 +1,5 @@
+import clsx from "clsx";
+
 export function Toast({
   message,
   isVisible,
@@ -32,11 +34,14 @@ export function Toast({
       : "translate-y-4 opacity-0 scale-95";
 
   return (
-    <div class={`toast ${positionClass} ${alignClass} z-50`}>
+    <div class={clsx("toast", positionClass, alignClass, "z-50")}>
       <div
-        class={`alert ${className} transform transition-all duration-300 ease-out ${
+        class={clsx(
+          "alert",
+          "transform transition-all duration-300 ease-out",
+          className,
           isVisible ? "translate-y-0 opacity-100 scale-100" : hiddenTransform
-        }`}
+        )}
         role="alert"
         aria-live="polite"
       >
