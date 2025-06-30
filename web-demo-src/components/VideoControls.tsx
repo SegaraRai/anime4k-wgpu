@@ -180,7 +180,7 @@ export function CompareController({
     (value: number): void => {
       onChange({
         mode,
-        ratio: value,
+        ratio: mode === "right" || mode === "bottom" ? 1 - value : value,
       });
     },
     [mode, onChange]
