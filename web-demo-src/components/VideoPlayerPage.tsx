@@ -147,7 +147,7 @@ export function VideoPlayerPage() {
                 >
                   Anime4K
                 </a>{" "}
-                upscaling algorithm. Upload a video file and experience
+                upscaling algorithm. Select a video file and experience
                 high-quality AI upscaling directly in your browser.
               </p>
               <p class="text-sm opacity-80">
@@ -382,7 +382,7 @@ export function VideoPlayerPage() {
                         <div class="flex justify-between">
                           <dt class="space-x-1">
                             <kbd class="kbd kbd-xs">Space</kbd>
-                            {"/"}
+                            {" / "}
                             <kbd class="kbd kbd-xs">Enter</kbd>
                           </dt>
                           <dd>Play/Pause</dd>
@@ -390,7 +390,7 @@ export function VideoPlayerPage() {
                         <div class="flex justify-between">
                           <dt class="space-x-1">
                             <kbd class="kbd kbd-xs">←</kbd>
-                            {"/"}
+                            {" / "}
                             <kbd class="kbd kbd-xs">→</kbd>
                           </dt>
                           <dd>Seek Backward/Forward 10s</dd>
@@ -398,7 +398,7 @@ export function VideoPlayerPage() {
                         <div class="flex justify-between">
                           <dt class="space-x-1">
                             <kbd class="kbd kbd-xs">↑</kbd>
-                            {"/"}
+                            {" / "}
                             <kbd class="kbd kbd-xs">↓</kbd>
                           </dt>
                           <dd>Increase/Decrease Volume</dd>
@@ -418,7 +418,7 @@ export function VideoPlayerPage() {
                         <div class="flex justify-between">
                           <dt class="space-x-1">
                             <kbd class="kbd kbd-xs">C</kbd>
-                            {"/"}
+                            {" / "}
                             <kbd class="kbd kbd-xs">Shift</kbd>
                             <kbd class="kbd kbd-xs">C</kbd>
                           </dt>
