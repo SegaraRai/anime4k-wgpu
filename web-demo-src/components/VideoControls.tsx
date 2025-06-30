@@ -167,19 +167,6 @@ function Slider({
   );
 }
 
-function calcRatio(
-  mode: "left" | "right" | "top" | "bottom",
-  rect: DOMRect,
-  event: MouseEvent
-): number {
-  const position =
-    mode === "left" || mode === "right"
-      ? (event.clientX - rect.left) / rect.width
-      : (event.clientY - rect.top) / rect.height;
-  const ratio = mode === "left" || mode === "top" ? position : 1 - position;
-  return Math.max(0, Math.min(ratio, 1));
-}
-
 export function CompareController({
   value: { mode, ratio },
   onChange,
