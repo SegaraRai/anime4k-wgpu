@@ -77,14 +77,19 @@ function PlaybackSeekBar({
 }) {
   const onUpdateDrag = useCallback(
     (value: number): void => {
-      onChangeDragging(value * (duration ?? 0));
+      if (duration != null) {
+        onChangeDragging(value * duration);
+      }
     },
     [duration, onChangeDragging]
   );
 
   const onEndDrag = useCallback(
-    (value: number): void => {
-      onChangeCurrent(value * (duration ?? 0));
+    (value: number | null, lastValue: number | null): void => {
+      const effectiveValue = value ?? lastValue;
+      if (effectiveValue != null && duration != null) {
+        onChangeCurrent(effectiveValue * duration);
+      }
       onChangeDragging(null);
     },
     [duration, onChangeCurrent, onChangeDragging]
@@ -93,6 +98,7 @@ function PlaybackSeekBar({
   const { handleMouseDown, handleTouchStart } = useDrag(
     duration != null
       ? {
+          clamp: true,
           onUpdate: onUpdateDrag,
           onEnd: onEndDrag,
         }
@@ -200,7 +206,11 @@ export function CompareController({
   const containerRef = useRef<HTMLDivElement>(null);
 
   const onUpdateDrag = useCallback(
-    (value: number): void => {
+    (value: number | null): void => {
+      if (value == null) {
+        return;
+      }
+
       onChange({
         mode,
         ratio: mode === "right" || mode === "bottom" ? 1 - value : value,
@@ -212,6 +222,7 @@ export function CompareController({
   const { handleMouseDown, handleTouchStart } = useDrag(
     mode !== "none" && mode !== "onyx"
       ? {
+          clamp: true,
           onUpdate: onUpdateDrag,
           onEnd: onUpdateDrag,
         }
