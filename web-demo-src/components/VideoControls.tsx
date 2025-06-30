@@ -15,6 +15,7 @@ import {
 } from "./constants";
 import { Toast } from "./Toast";
 import { useDrag } from "./useDrag";
+import { useIsFullscreen } from "./useIsFullscreen";
 import { useToast } from "./useToast";
 
 const SEEK_OFFSET_DIRECT = 10; // seconds
@@ -293,6 +294,7 @@ export function VideoControls({
   readonly onSelectFile: () => void;
 }) {
   const toast = useToast();
+  const isFullscreen = useIsFullscreen();
 
   const [lastConfig, setLastConfig] = useState<Anime4KConfig | null>(null);
   const displayConfig = config ?? lastConfig ?? DEFAULT_CONFIG;
@@ -687,7 +689,7 @@ export function VideoControls({
                 {/* Fullscreen button */}
                 <button
                   type="button"
-                  class="flex-none btn btn-circle btn-ghost btn-neutral btn-md"
+                  class={`flex-none btn btn-circle btn-ghost btn-neutral btn-md ${isFullscreen ? "text-primary" : ""}`}
                   aria-label="Toggle Fullscreen"
                   onClick={() => {
                     toggleFullscreen();
@@ -713,7 +715,7 @@ export function VideoControls({
                     tabindex={0}
                     role="button"
                     aria-label="Comparison Mode Menu"
-                    class={`flex-none btn btn-circle btn-ghost btn-neutral btn-md ${compare.mode !== "none" ? "text-accent" : ""}`}
+                    class={`flex-none btn btn-circle btn-ghost btn-neutral btn-md ${compare.mode !== "none" ? "text-primary" : ""}`}
                   >
                     <span class="size-5 icon-[akar-icons--align-to-middle] rotate-90"></span>
                   </div>
@@ -753,7 +755,7 @@ export function VideoControls({
                     tabindex={0}
                     role="button"
                     aria-label="Anime4K Settings Menu"
-                    class={`flex-none btn btn-circle btn-ghost btn-neutral btn-md ${config ? "text-accent" : ""}`}
+                    class={`flex-none btn btn-circle btn-ghost btn-neutral btn-md ${config ? "text-primary" : ""}`}
                   >
                     <span class="size-5 icon-[akar-icons--sparkles]"></span>
                   </div>
