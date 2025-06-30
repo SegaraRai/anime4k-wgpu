@@ -85,9 +85,9 @@ web-demo-src/
 
 ### Prerequisites
 
-- **Node.js** (18+)
+- **Node.js** (22+)
 - **pnpm** (recommended package manager)
-- **WebGPU-compatible browser** (Chrome 113+, ~~Firefox Nightly,~~ Safari Technology Preview)
+- **WebGPU-compatible browser** (Chrome 116+, ~~Firefox Nightly,~~ Safari 26+)
 
 ### Setup
 
@@ -110,10 +110,10 @@ pnpm preview
 - **WebGPU Support**: The application requires WebGPU API support
 - **Feature Detection**: The app will display compatibility warnings for unsupported browsers
 - **Recommended Browsers**:
-  - Chrome/Edge 113+ (stable)
+  - Chrome/Edge 116+ (stable)
   - ~~Firefox with `dom.webgpu.enabled` flag~~
     - Firefox currently does not support `copyExternalImageToTexture` for `<video>` elements, which is required for this demo
-  - Safari Technology Preview
+  - Safari 26+ (Technology Preview)
 
 ## Performance Considerations
 

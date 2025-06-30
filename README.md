@@ -70,7 +70,7 @@ Experience Anime4K-wgpu directly in your browser! The web demo provides an inter
 
 **Requirements:**
 
-- WebGPU-compatible browser (Chrome 113+, Firefox Nightly, Safari Technology Preview)
+- WebGPU-compatible browser (Chrome 116+, ~~Firefox Nightly~~, Safari 26+)
 - Modern GPU with WebGPU support
 
 For more details, see the [Web Demo README](web-demo-src/README.md).
