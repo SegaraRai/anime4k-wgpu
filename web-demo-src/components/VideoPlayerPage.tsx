@@ -6,7 +6,10 @@ import {
   useRef,
   useState,
 } from "preact/hooks";
-import type { Anime4KConfig } from "../anime4k/player";
+import {
+  preloadPredefinedPipelines,
+  type Anime4KConfig,
+} from "../anime4k/player";
 import {
   DEFAULT_COMPARE,
   DEFAULT_CONFIG,
@@ -29,6 +32,10 @@ export function VideoPlayerPage() {
 
   useLayoutEffect(() => {
     setAccept(getBrowserSupportedVideoMediaTypes().join(", "));
+  }, []);
+
+  useEffect(() => {
+    preloadPredefinedPipelines();
   }, []);
 
   const fileInputRef = useRef<HTMLInputElement>(null);

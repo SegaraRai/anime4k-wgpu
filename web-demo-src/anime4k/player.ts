@@ -1,6 +1,7 @@
 import {
   createPipelineExecutor,
   executePipeline,
+  type ExecutablePipeline,
   type PipelineExecutor,
 } from "./executor";
 import {
@@ -9,6 +10,26 @@ import {
   type Anime4KPerformancePreset,
 } from "./presets";
 import renderShader from "./render.wgsl?raw";
+
+type PredefinedPipelines = Record<string, ExecutablePipeline>;
+
+let gPredefinedPipelinesPromise: Promise<PredefinedPipelines> | undefined;
+
+function fetchPredefinedPipelines(): Promise<PredefinedPipelines> {
+  gPredefinedPipelinesPromise ??= (
+    import(
+      "./predefinedPipelines.json"
+    ) as unknown as Promise<PredefinedPipelines>
+  ).catch((error) => {
+    console.error("❌ Failed to load predefined pipelines:", error);
+    throw error;
+  });
+  return gPredefinedPipelinesPromise;
+}
+
+export async function preloadPredefinedPipelines(): Promise<void> {
+  await fetchPredefinedPipelines();
+}
 
 export interface Anime4KConfig {
   readonly preset: Anime4KPreset;
@@ -86,7 +107,6 @@ async function createContext(
   canvasContext.configure({
     device,
     format: navigator.gpu.getPreferredCanvasFormat(),
-    // Remove explicit colorSpace to let browser handle it naturally
     alphaMode: "opaque",
     colorSpace: "display-p3",
   });
@@ -94,7 +114,7 @@ async function createContext(
   // Create a new texture for the latest frame (input to Anime4K)
   const latestFrame = device.createTexture({
     size: [video.videoWidth, video.videoHeight],
-    format: "rgba8unorm", // Keep unorm for Anime4K compatibility
+    format: "rgba8unorm",
     usage:
       GPUTextureUsage.COPY_DST |
       GPUTextureUsage.STORAGE_BINDING |
@@ -107,14 +127,11 @@ async function createContext(
     ? createPipelines(config.preset, config.performance, config.scale)
     : [];
 
-  const predefinedPipelines = await import("./predefinedPipelines.json");
-
-  const executablePipelines = pipelineIds.map(
-    (id) => (predefinedPipelines as any)[id]
-  );
+  const predefinedPipelines = await fetchPredefinedPipelines();
+  const executablePipelines = pipelineIds.map((id) => predefinedPipelines[id]);
 
   // Check if all pipelines are valid
-  const invalidPipelines = executablePipelines.filter((pipeline) => !pipeline);
+  const invalidPipelines = pipelineIds.filter((id) => !predefinedPipelines[id]);
   if (invalidPipelines.length > 0) {
     console.error("❌ Found invalid pipelines:", invalidPipelines);
     throw new Error(`Invalid pipelines found: ${invalidPipelines.join(", ")}`);
@@ -197,8 +214,7 @@ function render({
   renderPipeline,
   renderBindGroup,
 }: RenderingContext): void {
-  // Copy the external texture to the latestFrame
-  // Preserve original color space and range
+  // Copy the external texture (video frame) to the latestFrame texture
   device.queue.copyExternalImageToTexture(
     {
       source: video,
@@ -210,18 +226,14 @@ function render({
     [video.videoWidth, video.videoHeight]
   );
 
-  // Use a single command encoder for both conversion and Anime4K pipeline
-  const mainEncoder = device.createCommandEncoder();
-  executePipeline(executor, mainEncoder);
-  device.queue.submit([mainEncoder.finish()]);
+  const encoder = device.createCommandEncoder();
 
-  const commandEncoder = device.createCommandEncoder();
+  // Execute the Anime4K pipeline
+  executePipeline(executor, encoder);
 
-  // The Anime4K pipeline was already executed during video frame processing
-  // Now just render the output texture to canvas
+  // Create a render pass to output the Anime4K result to the canvas
   const canvasTexture = canvasContext.getCurrentTexture();
-
-  const renderPass = commandEncoder.beginRenderPass({
+  const renderPass = encoder.beginRenderPass({
     colorAttachments: [
       {
         view: canvasTexture.createView(),
@@ -231,17 +243,13 @@ function render({
       },
     ],
   });
-
   renderPass.setPipeline(renderPipeline);
-
-  // Render the Anime4K output texture
   renderPass.setBindGroup(0, renderBindGroup);
-
   renderPass.draw(6);
   renderPass.end();
 
-  const commands = commandEncoder.finish();
-  device.queue.submit([commands]);
+  // Submit the commands to the GPU
+  device.queue.submit([encoder.finish()]);
 }
 
 export interface Anime4KController {
