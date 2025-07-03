@@ -114,7 +114,7 @@ export function VideoPlayer({
   return (
     <div
       ref={containerRef}
-      class="relative w-full h-full overflow-clip"
+      class="relative w-full h-full overflow-clip contain-strict"
       data-theme="sunset"
     >
       <video

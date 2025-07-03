@@ -36,6 +36,10 @@ export function willHandleTouchStart(event: TouchEvent): boolean {
 }
 
 function willHandleMouseUp(event: MouseEvent): boolean {
+  // In case of double-clicks, `event.buttons` may still contain the left mouse button.
+  // Therefore we have to treat the left mouse button as "not pressed" if
+  // - `event.button` is 0 (left button),
+  // - or `event.buttons` does not contain the left button (i.e., `event.buttons & 1` is 0).
   return event.button === 0 || (event.buttons & 1) === 0;
 }
 

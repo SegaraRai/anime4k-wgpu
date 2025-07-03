@@ -633,11 +633,43 @@ export function VideoControls({
     duration
   );
 
+  const handleSeekbarChangeCurrent = useCallback(
+    (value: number): void => {
+      video.currentTime = value;
+      setSeekingTime(value);
+    },
+    [video]
+  );
+
+  const handleSeekbarChangeDragging = useCallback(
+    (value: number | null): void => {
+      setDraggingTime(value);
+    },
+    []
+  );
+
+  const handleChangePaused = useCallback((paused: boolean): void => {
+    if (paused) {
+      video.pause();
+    } else {
+      video.play();
+    }
+    setIsPlaying(!paused);
+  }, []);
+
   return (
     <div
       class="absolute inset-0 flex flex-col justify-end group select-none touch-manipulation"
       data-show-controls={!isPlaying ? 1 : undefined}
       onKeyDown={handleKeyDown}
+      onWheel={(event) => {
+        if (!isFullscreen) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        updateVolumeByOffset(Math.sign(event.deltaY) * -VOLUME_OFFSET);
+      }}
     >
       <button
         class="absolute inset-0 focus:!outline-none opacity-0"
@@ -971,21 +1003,9 @@ export function VideoControls({
                 dragging={draggingTime}
                 buffered={buffered}
                 duration={duration}
-                onChangeCurrent={(value) => {
-                  video.currentTime = value;
-                  setSeekingTime(value);
-                }}
-                onChangeDragging={(value) => {
-                  setDraggingTime(value);
-                }}
-                onChangePaused={(paused) => {
-                  if (paused) {
-                    video.pause();
-                  } else {
-                    video.play();
-                  }
-                  setIsPlaying(!paused);
-                }}
+                onChangeCurrent={handleSeekbarChangeCurrent}
+                onChangeDragging={handleSeekbarChangeDragging}
+                onChangePaused={handleChangePaused}
               />
             </div>
           </div>
