@@ -126,8 +126,7 @@ mod tests {
 
         if !duplicates.is_empty() {
             panic!(
-                "Found duplicate physical texture IDs: {:?}. Each physical texture ID should appear exactly once in the physical_textures vector.",
-                duplicates
+                "Found duplicate physical texture IDs: {duplicates:?}. Each physical texture ID should appear exactly once in the physical_textures vector."
             );
         }
     }

@@ -58,10 +58,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let result = compare_images(&glsl_output, &wgsl_output);
         match result {
             CompareResult::Match => {
-                println!("✓ Outputs match for shader {name} (GLSL: {:.2?}, WGSL: {:.2?})", glsl_duration, wgsl_duration);
+                println!("✓ Outputs match for shader {name} (GLSL: {glsl_duration:.2?}, WGSL: {wgsl_duration:.2?})");
             }
             CompareResult::DimensionMismatch { glsl_dimensions, wgsl_dimensions } => {
-                eprintln!("✗ Dimension mismatch for shader {name}: GLSL {:?}, WGSL {:?}", glsl_dimensions, wgsl_dimensions);
+                eprintln!("✗ Dimension mismatch for shader {name}: GLSL {glsl_dimensions:?}, WGSL {wgsl_dimensions:?}");
             }
             CompareResult::PixelMismatch {
                 r_matched,
@@ -69,7 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 b_matched,
                 a_matched,
             } => {
-                eprintln!("✗ Pixel mismatch for shader {name}: R {}, G {}, B {}, A {}", r_matched, g_matched, b_matched, a_matched);
+                eprintln!("✗ Pixel mismatch for shader {name}: R {r_matched}, G {g_matched}, B {b_matched}, A {a_matched}");
             }
         }
     }

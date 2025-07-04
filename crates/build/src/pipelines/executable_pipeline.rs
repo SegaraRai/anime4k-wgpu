@@ -468,19 +468,19 @@ impl fmt::Display for PipelineValidationError {
             Self::EmptyId => write!(f, "Pipeline ID cannot be empty"),
             Self::EmptyName => write!(f, "Pipeline name cannot be empty"),
             Self::NoPasses => write!(f, "Pipeline must have at least one pass"),
-            Self::PassMissingInputs(pass) => write!(f, "Pass {} is missing inputs", pass),
-            Self::PassMissingOutputs(pass) => write!(f, "Pass {} is missing outputs", pass),
+            Self::PassMissingInputs(pass) => write!(f, "Pass {pass} is missing inputs"),
+            Self::PassMissingOutputs(pass) => write!(f, "Pass {pass} is missing outputs"),
             Self::DuplicateBinding(pass, binding) => {
-                write!(f, "Duplicate binding {} in pass {}", binding, pass)
+                write!(f, "Duplicate binding {binding} in pass {pass}")
             }
             Self::ResultNotInLastPass(pass) => {
-                write!(f, "RESULT output found in pass {} but must only be in the last pass", pass)
+                write!(f, "RESULT output found in pass {pass} but must only be in the last pass")
             }
             Self::TextureOverwritten(pass, texture) => {
-                write!(f, "Texture '{}' is being overwritten in pass {}", texture, pass)
+                write!(f, "Texture '{texture}' is being overwritten in pass {pass}")
             }
             Self::InputTextureNotFound(pass, texture) => {
-                write!(f, "Input texture '{}' in pass {} was not created by any previous pass or is not SOURCE", texture, pass)
+                write!(f, "Input texture '{texture}' in pass {pass} was not created by any previous pass or is not SOURCE")
             }
         }
     }
@@ -514,7 +514,7 @@ passes:
 
         let load_shader_file = |file: &str| -> Result<String, std::io::Error> {
             // Simulate loading shader file content
-            Ok(format!("Shader content for {}", file))
+            Ok(format!("Shader content for {file}"))
         };
         let executable = ExecutablePipeline::from_yaml(yaml, load_shader_file).unwrap();
         assert_eq!(executable.id, "test_pipeline");

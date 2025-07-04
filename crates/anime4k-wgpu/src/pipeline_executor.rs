@@ -84,7 +84,7 @@ impl BoundPipeline {
             .iter()
             .map(|filter_mode| {
                 let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-                    label: Some(&format!("Sampler {:?}", filter_mode)),
+                    label: Some(&format!("Sampler {filter_mode:?}")),
                     address_mode_u: wgpu::AddressMode::ClampToEdge,
                     address_mode_v: wgpu::AddressMode::ClampToEdge,
                     address_mode_w: wgpu::AddressMode::ClampToEdge,

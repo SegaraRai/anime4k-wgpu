@@ -54,7 +54,7 @@ fn main() {
             pipelines.extend(aux_pipelines);
         }
         Err(e) => {
-            eprintln!("Error loading auxiliary pipelines: {}", e);
+            eprintln!("Error loading auxiliary pipelines: {e}");
             process::exit(1);
         }
     }
@@ -68,7 +68,7 @@ fn main() {
                 pipelines.extend(cnn_pipelines);
             }
             Err(e) => {
-                eprintln!("Error loading CNN/GAN pipelines: {}", e);
+                eprintln!("Error loading CNN/GAN pipelines: {e}");
                 process::exit(1);
             }
         }
@@ -82,13 +82,13 @@ fn main() {
     match serde_json::to_string_pretty(&pipelines) {
         Ok(json) => {
             if let Err(e) = fs::write(output_file, json) {
-                eprintln!("Error writing output file '{}': {}", output_file, e);
+                eprintln!("Error writing output file '{output_file}': {e}");
                 process::exit(1);
             }
             println!("Successfully wrote {} pipelines to '{}'", pipelines.len(), output_file);
         }
         Err(e) => {
-            eprintln!("Error serializing pipelines to JSON: {}", e);
+            eprintln!("Error serializing pipelines to JSON: {e}");
             process::exit(1);
         }
     }
@@ -100,7 +100,7 @@ fn load_predefined_auxiliary_pipelines(project_root: &Path, minify: bool) -> Res
 
     for (name, path) in PREDEFINED_PIPELINES_AUX {
         let manifest_path = project_root.join(path);
-        println!("Processing auxiliary pipeline: {} ({})", name, path);
+        println!("Processing auxiliary pipeline: {name} ({path})");
 
         match wgsl_to_executable_pipeline(manifest_path.to_str().unwrap(), minify) {
             Ok(pipeline) => {
@@ -108,7 +108,7 @@ fn load_predefined_auxiliary_pipelines(project_root: &Path, minify: bool) -> Res
                 pipelines.insert(name.to_string(), pipeline_with_type);
             }
             Err(e) => {
-                eprintln!("Warning: Failed to load auxiliary pipeline '{}': {}", name, e);
+                eprintln!("Warning: Failed to load auxiliary pipeline '{name}': {e}");
             }
         }
     }
@@ -122,7 +122,7 @@ fn load_predefined_cnn_pipelines(project_root: &Path, helpers_dir: &Path, minify
 
     for (name, path) in PREDEFINED_PIPELINES_CNN {
         let glsl_path = project_root.join(path);
-        println!("Processing CNN/GAN pipeline: {} ({})", name, path);
+        println!("Processing CNN/GAN pipeline: {name} ({path})");
 
         match cnn_glsl_to_executable_pipeline(glsl_path.to_str().unwrap(), helpers_dir.to_str().unwrap(), minify) {
             Ok(pipeline) => {
@@ -130,7 +130,7 @@ fn load_predefined_cnn_pipelines(project_root: &Path, helpers_dir: &Path, minify
                 pipelines.insert(name.to_string(), pipeline_with_type);
             }
             Err(e) => {
-                eprintln!("Warning: Failed to load CNN/GAN pipeline '{}': {}", name, e);
+                eprintln!("Warning: Failed to load CNN/GAN pipeline '{name}': {e}");
             }
         }
     }

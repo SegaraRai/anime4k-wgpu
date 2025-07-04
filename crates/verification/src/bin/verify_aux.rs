@@ -45,7 +45,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for (glsl_path, wgsl_path) in get_preset_pairs() {
         // println!("  Processing shader: {glsl_path} and {wgsl_path}");
 
-        let glsl_content = std::fs::read_to_string(glsl_path).map_err(|e| format!("Failed to read GLSL shader file {}: {e}", glsl_path))?;
+        let glsl_content = std::fs::read_to_string(glsl_path).map_err(|e| format!("Failed to read GLSL shader file {glsl_path}: {e}"))?;
         let glsl_engine = GlslReferenceEngine::new().await?;
         let mut glsl_processor = ImageProcessor::new(glsl_engine);
         let (glsl_output, glsl_duration) = match glsl_processor.process_shader_pipeline_no_io(&glsl_content, &input_image) {
@@ -76,10 +76,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let result = compare_images(&glsl_output, &wgsl_output);
         match result {
             CompareResult::Match => {
-                println!("✓ Outputs match for shader {wgsl_path} (GLSL: {:.2?}, WGSL: {:.2?})", glsl_duration, wgsl_duration);
+                println!("✓ Outputs match for shader {wgsl_path} (GLSL: {glsl_duration:.2?}, WGSL: {wgsl_duration:.2?})");
             }
             CompareResult::DimensionMismatch { glsl_dimensions, wgsl_dimensions } => {
-                eprintln!("✗ Dimension mismatch for shader {wgsl_path}: GLSL {:?}, WGSL {:?}", glsl_dimensions, wgsl_dimensions);
+                eprintln!("✗ Dimension mismatch for shader {wgsl_path}: GLSL {glsl_dimensions:?}, WGSL {wgsl_dimensions:?}");
             }
             CompareResult::PixelMismatch {
                 r_matched,
@@ -87,7 +87,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 b_matched,
                 a_matched,
             } => {
-                eprintln!("✗ Pixel mismatch for shader {wgsl_path}: R {}, G {}, B {}, A {}", r_matched, g_matched, b_matched, a_matched);
+                eprintln!("✗ Pixel mismatch for shader {wgsl_path}: R {r_matched}, G {g_matched}, B {b_matched}, A {a_matched}");
             }
         }
     }

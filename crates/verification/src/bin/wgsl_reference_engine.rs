@@ -21,16 +21,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let output_path = &args[3];
 
     println!("WGSL Reference Engine Starting...");
-    println!("- Pipeline: {}", pipeline_path);
-    println!("- Input: {}", input_path);
-    println!("- Output: {}", output_path);
+    println!("- Pipeline: {pipeline_path}");
+    println!("- Input: {input_path}");
+    println!("- Output: {output_path}");
 
     // Verify input files exist
     if !Path::new(pipeline_path).exists() {
-        return Err(format!("Pipeline file not found: {}", pipeline_path).into());
+        return Err(format!("Pipeline file not found: {pipeline_path}").into());
     }
     if !Path::new(input_path).exists() {
-        return Err(format!("Input image not found: {}", input_path).into());
+        return Err(format!("Input image not found: {input_path}").into());
     }
 
     // Initialize engine

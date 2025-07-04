@@ -159,7 +159,7 @@ pub fn save_texture_as_image(device: &wgpu::Device, queue: &wgpu::Queue, texture
         wgpu::TextureFormat::R32Float => (1, 4),    // Single component, 4 bytes per float
         wgpu::TextureFormat::Rg32Float => (2, 4),   // Two components, 4 bytes per float
         wgpu::TextureFormat::Rgba32Float => (4, 4), // Four components, 4 bytes per float
-        _ => return Err(format!("Unsupported texture format for saving: {:?}", format).into()),
+        _ => return Err(format!("Unsupported texture format for saving: {format:?}").into()),
     };
 
     // Calculate buffer requirements
@@ -242,7 +242,7 @@ pub fn save_texture_as_image(device: &wgpu::Device, queue: &wgpu::Queue, texture
             // RGBA32Float - direct conversion, already in the right format
             image::Rgba32FImage::from_raw(width, height, float_data.to_vec()).ok_or("Failed to create RGBA32F image from data")?
         }
-        _ => return Err(format!("Unsupported component count: {}", components).into()),
+        _ => return Err(format!("Unsupported component count: {components}").into()),
     };
 
     Ok(image)

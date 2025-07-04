@@ -17,7 +17,7 @@ use anime4k_wgpu_build::{
 fn dump_shader_string_literal(shader: &str) -> String {
     // Escape special characters for Rust string literal
     let escaped_shader = shader.replace('\\', "\\\\").replace('"', "\\\"").replace('\n', "\\n");
-    format!("\"{}\"", escaped_shader)
+    format!("\"{escaped_shader}\"")
 }
 
 /// Generates Rust code for an ExecutablePipeline constant
@@ -53,7 +53,7 @@ fn dump_executable_pipeline(name: &str, pipeline: &ExecutablePipeline) -> String
     // Generate required sampler definitions
     output.push_str("    samplers: &[\n");
     for sampler in &pipeline.required_samplers {
-        output.push_str(&format!("        SamplerFilterMode::{:?},\n", sampler));
+        output.push_str(&format!("        SamplerFilterMode::{sampler:?},\n"));
     }
     output.push_str("    ],\n");
 

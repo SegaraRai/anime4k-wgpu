@@ -98,7 +98,7 @@ pub fn cnn_glsl_to_executable_pipeline(glsl_filepath: &str, helpers_dir: &str, m
         files
             .get(filename)
             .cloned()
-            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, format!("File not found: {}", filename)))
+            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, format!("File not found: {filename}")))
     })?;
 
     Ok(pipeline)

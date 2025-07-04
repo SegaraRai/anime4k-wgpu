@@ -103,7 +103,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Loading image from: {}", args.input.display());
     let input_image = image::open(&args.input)?;
     let (input_width, input_height) = input_image.dimensions();
-    println!("Input image: {}x{}", input_width, input_height);
+    println!("Input image: {input_width}x{input_height}");
 
     // Calculate expected output dimensions based on scale factor
     let scale_factor_u32 = args.scale_factor.ceil() as u32;
@@ -276,7 +276,7 @@ fn save_texture_to_image(device: &wgpu::Device, queue: &wgpu::Queue, texture: &w
         wgpu::TextureFormat::R32Float => (1, 4),
         wgpu::TextureFormat::Rg32Float => (2, 4),
         wgpu::TextureFormat::Rgba32Float => (4, 4),
-        _ => return Err(format!("Unsupported texture format for saving: {:?}", format).into()),
+        _ => return Err(format!("Unsupported texture format for saving: {format:?}").into()),
     };
 
     let buffer_size = (width * height * components * bytes_per_component) as u64;
@@ -358,7 +358,7 @@ fn save_texture_to_image(device: &wgpu::Device, queue: &wgpu::Queue, texture: &w
             // RGBA32Float - direct conversion, already in correct format
             image::Rgba32FImage::from_raw(width, height, float_data.to_vec()).ok_or("Failed to create RGBA32F image from data")?
         }
-        _ => return Err(format!("Unsupported number of components: {}", components).into()),
+        _ => return Err(format!("Unsupported number of components: {components}").into()),
     };
 
     Ok(image)

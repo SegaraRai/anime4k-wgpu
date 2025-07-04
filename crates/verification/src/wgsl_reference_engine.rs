@@ -168,7 +168,7 @@ impl PipelineProcessor {
             shader_map
                 .get(file)
                 .map(|&content| content.to_string())
-                .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, format!("Failed to load shader file '{}'", file)))
+                .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, format!("Failed to load shader file '{file}'")))
         })?;
 
         let mut sampler_map: HashMap<SamplerFilterMode, wgpu::Sampler> = HashMap::new();
@@ -601,7 +601,7 @@ impl PipelineProcessor {
 
             if self.log {
                 let (output_width, output_height) = prepared_pass.compute_dimensions;
-                println!("- Pass {} completed: dimensions: {}x{}", pass_index, output_width, output_height);
+                println!("- Pass {pass_index} completed: dimensions: {output_width}x{output_height}");
             }
         }
 
@@ -609,9 +609,9 @@ impl PipelineProcessor {
         if let Some(result_texture_id) = self.executable_pipeline.get_result_texture_id() {
             if let Some(result_texture) = self.physical_textures.get(&result_texture_id) {
                 save_texture_as_image_file(&self.engine.device, &self.engine.queue, result_texture, output_path)?;
-                println!("Final result saved to: {} (physical texture ID: {})", output_path, result_texture_id);
+                println!("Final result saved to: {output_path} (physical texture ID: {result_texture_id})");
             } else {
-                return Err(format!("Result texture with ID {} not found", result_texture_id).into());
+                return Err(format!("Result texture with ID {result_texture_id} not found").into());
             }
         } else {
             return Err("No RESULT texture found in pipeline analysis".into());
@@ -665,7 +665,7 @@ impl PipelineProcessor {
         let result_texture = self
             .physical_textures
             .get(&result_texture_id)
-            .ok_or(format!("Result texture with ID {} not found", result_texture_id))?;
+            .ok_or(format!("Result texture with ID {result_texture_id} not found"))?;
         let image = save_texture_as_image(&self.engine.device, &self.engine.queue, result_texture)?;
 
         // Calculate total execution time

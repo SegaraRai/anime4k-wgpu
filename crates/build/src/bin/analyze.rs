@@ -23,7 +23,7 @@ fn main() {
 
     // Check if the manifest file exists
     if !Path::new(manifest_path).exists() {
-        eprintln!("Error: Manifest file '{}' does not exist", manifest_path);
+        eprintln!("Error: Manifest file '{manifest_path}' does not exist");
         process::exit(1);
     }
 
@@ -45,10 +45,10 @@ fn main() {
     match ExecutablePipeline::from_file(manifest_path, load_shader_file) {
         Ok(executable) => {
             // Dump the result using Debug formatting
-            println!("{:#?}", executable);
+            println!("{executable:#?}");
         }
         Err(e) => {
-            eprintln!("Error compiling manifest '{}': {}", manifest_path, e);
+            eprintln!("Error compiling manifest '{manifest_path}': {e}");
             process::exit(1);
         }
     }

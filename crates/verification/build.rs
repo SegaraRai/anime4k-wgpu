@@ -24,9 +24,9 @@ fn create_manifest(shader_name: &str, passes: &[(String, WgslStageShader)]) -> S
     let mut manifest = String::new();
 
     // Pipeline header with identification
-    manifest.push_str(&format!("id: {}\n", shader_name));
-    manifest.push_str(&format!("name: {}\n", shader_name));
-    manifest.push_str(&format!("description: {}\n", shader_name));
+    manifest.push_str(&format!("id: {shader_name}\n"));
+    manifest.push_str(&format!("name: {shader_name}\n"));
+    manifest.push_str(&format!("description: {shader_name}\n"));
     manifest.push_str("passes:\n");
 
     // Generate pass entries for each shader stage
@@ -36,13 +36,13 @@ fn create_manifest(shader_name: &str, passes: &[(String, WgslStageShader)]) -> S
 
         // Pass identification and shader file reference
         manifest.push_str(&format!("  - id: {}\n", wgsl_shader.name));
-        manifest.push_str(&format!("    file: {}\n", filename));
+        manifest.push_str(&format!("    file: {filename}\n"));
 
         // Input texture bindings
         manifest.push_str("    inputs:\n");
         for (binding, id) in &wgsl_shader.inputs {
-            manifest.push_str(&format!("      - id: {}\n", id));
-            manifest.push_str(&format!("        binding: {}\n", binding));
+            manifest.push_str(&format!("      - id: {id}\n"));
+            manifest.push_str(&format!("        binding: {binding}\n"));
         }
 
         // Output texture binding (always RGBA with 4 components)
@@ -55,7 +55,7 @@ fn create_manifest(shader_name: &str, passes: &[(String, WgslStageShader)]) -> S
         // Optional sampler binding if the shader requires texture sampling
         if let Some(binding) = &wgsl_shader.sampler {
             manifest.push_str("    samplers:\n");
-            manifest.push_str(&format!("      - binding: {}\n", binding));
+            manifest.push_str(&format!("      - binding: {binding}\n"));
         }
     }
 

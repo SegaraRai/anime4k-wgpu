@@ -270,7 +270,7 @@ impl MpvHook {
                         wgpu::TextureFormat::Rgba32Float => "rgba32f", // Four component 32-bit float
                         _ => "rgba32f",                                // Default fallback
                     };
-                    format!("layout(binding = {}, {}) uniform {} image2D {};\n", binding_index, format_string, access_type, texture_name)
+                    format!("layout(binding = {binding_index}, {format_string}) uniform {access_type} image2D {texture_name};\n")
                 }
                 _ => {
                     // Fallback case for other access types - treat as image storage
@@ -280,7 +280,7 @@ impl MpvHook {
                         wgpu::TextureFormat::Rgba32Float => "rgba32f",
                         _ => "rgba32f", // Default fallback
                     };
-                    format!("layout(binding = {}, {}) uniform {} image2D {};\n", binding_index, format_string, access_type, texture_name)
+                    format!("layout(binding = {binding_index}, {format_string}) uniform {access_type} image2D {texture_name};\n")
                 }
             }
         };
@@ -626,7 +626,7 @@ impl ImageProcessor {
                 let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
                 texture_views.push(texture_view);
             } else {
-                return Err(format!("Missing texture for input: {}", input_name).into());
+                return Err(format!("Missing texture for input: {input_name}").into());
             }
         }
 
