@@ -125,9 +125,7 @@ mod tests {
         let duplicates: Vec<_> = id_counts.iter().filter(|(_, count)| **count > 1).collect();
 
         if !duplicates.is_empty() {
-            panic!(
-                "Found duplicate physical texture IDs: {duplicates:?}. Each physical texture ID should appear exactly once in the physical_textures vector."
-            );
+            panic!("Found duplicate physical texture IDs: {duplicates:?}. Each physical texture ID should appear exactly once in the physical_textures vector.");
         }
     }
 

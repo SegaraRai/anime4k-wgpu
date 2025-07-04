@@ -662,10 +662,7 @@ impl PipelineProcessor {
             .executable_pipeline
             .get_result_texture_id()
             .ok_or_else(|| "No RESULT texture found in pipeline analysis".to_string())?;
-        let result_texture = self
-            .physical_textures
-            .get(&result_texture_id)
-            .ok_or(format!("Result texture with ID {result_texture_id} not found"))?;
+        let result_texture = self.physical_textures.get(&result_texture_id).ok_or(format!("Result texture with ID {result_texture_id} not found"))?;
         let image = save_texture_as_image(&self.engine.device, &self.engine.queue, result_texture)?;
 
         // Calculate total execution time
