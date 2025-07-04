@@ -121,8 +121,6 @@ impl Anime4KPerformancePreset {
 /// characteristics for different types of content.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Anime4KPreset {
-    /// No processing applied
-    Off,
     /// Restore → Upscale
     ModeA,
     /// Restore Soft → Upscale
@@ -141,7 +139,6 @@ impl Anime4KPreset {
     /// Returns the human-readable name of this preset
     pub fn name(&self) -> &'static str {
         match self {
-            Anime4KPreset::Off => "OFF",
             Anime4KPreset::ModeA => "Mode A",
             Anime4KPreset::ModeB => "Mode B",
             Anime4KPreset::ModeC => "Mode C",
@@ -164,7 +161,6 @@ impl Anime4KPreset {
     /// A vector of executable pipelines that should be run in sequence
     pub fn create_pipelines(&self, performance_preset: Anime4KPerformancePreset, target_scale_factor: f64) -> Vec<&'static ExecutablePipeline> {
         let mut base = match self {
-            Anime4KPreset::Off => return vec![],
             Anime4KPreset::ModeA => vec![&aux::CLAMP_HIGHLIGHTS, performance_preset.for_initial_restore(), performance_preset.for_initial_upscale_2x()],
             Anime4KPreset::ModeB => vec![&aux::CLAMP_HIGHLIGHTS, performance_preset.for_initial_restore_soft(), performance_preset.for_initial_upscale_2x()],
             Anime4KPreset::ModeC => vec![&aux::CLAMP_HIGHLIGHTS, performance_preset.for_initial_upscale_denoise_2x()],

@@ -182,19 +182,19 @@ impl PlayerContext {
     ///
     /// # Arguments
     /// * `preset` - The Anime4K preset to activate
-    pub fn set_anime4k_preset(&mut self, preset: Anime4KPreset) {
+    pub fn set_anime4k_preset(&mut self, preset: Option<Anime4KPreset>) {
         if self.renderer.get_current_preset() == preset {
             return;
         }
 
-        if preset == Anime4KPreset::Off {
-            tracing::info!("Anime4K disabled");
-        } else {
+        if let Some(preset) = preset {
             tracing::info!(
                 "Anime4K preset set to: {} (Anime4K performance preset is {})",
                 preset.name(),
                 self.renderer.get_current_performance_preset().name()
             );
+        } else {
+            tracing::info!("Anime4K disabled");
         }
 
         self.renderer.set_anime4k_preset(preset);
@@ -280,10 +280,10 @@ impl PlayerContext {
 
     /// Updates the window title to reflect current Anime4K settings and pause state
     fn update_window_title(&self) {
-        let preset_text = if self.renderer.get_current_preset() == Anime4KPreset::Off {
-            "OFF"
+        let preset_text = if let Some(preset) = self.renderer.get_current_preset() {
+            &format!("{} {}", preset.name(), self.renderer.get_current_performance_preset().name())
         } else {
-            &format!("{} {}", self.renderer.get_current_preset().name(), self.renderer.get_current_performance_preset().name())
+            "OFF"
         };
 
         let window_title = format!("Anime4K-wgpu Video Player [Anime4K {preset_text}]{}", if self.playback.is_paused { " [PAUSED]" } else { "" });
@@ -469,7 +469,7 @@ struct Renderer {
 
     // Anime4K upscaling pipeline and its output texture
     anime4k_pipeline: Option<(PipelineExecutor, wgpu::Texture)>,
-    current_preset: Anime4KPreset,
+    current_preset: Option<Anime4KPreset>,
     current_performance_preset: Anime4KPerformancePreset,
 
     // Video dimensions for pipeline setup
@@ -722,8 +722,8 @@ impl Renderer {
             rgb_pipeline,
             rgb_texture: None,
             anime4k_pipeline: None,
-            current_preset: Anime4KPreset::Off,
-            current_performance_preset: Anime4KPerformancePreset::Light,
+            current_preset: None,
+            current_performance_preset: Anime4KPerformancePreset::Medium,
             video_dimensions: (size.width, size.height),
         }
     }
@@ -782,30 +782,29 @@ impl Renderer {
             "Setting up Anime4K for {video_width}x{video_height} (target={}x{}), current_preset={}, anime4k_pipeline={}",
             self.surface_configuration.width,
             self.surface_configuration.height,
-            self.current_preset.name(),
+            self.current_preset.as_ref().map_or("None", |p| p.name()),
             self.anime4k_pipeline.is_some(),
         );
 
-        // Disable pipeline if Anime4K is turned off
-        if self.current_preset == Anime4KPreset::Off {
+        if let Some(preset) = self.current_preset {
+            let target_width = self.surface_configuration.width;
+            let target_height = self.surface_configuration.height;
+
+            if let Some(rgb_texture) = &self.rgb_texture {
+                // Calculate target scale factor to fit video in window
+                let target_scale_factor = (target_width as f64 / video_width as f64).max(target_height as f64 / video_height as f64);
+
+                // Create Anime4K pipelines with appropriate settings
+                let pipelines = preset.create_pipelines(self.current_performance_preset, target_scale_factor);
+
+                // Initialize the Anime4K shader pipeline
+                let (pipeline, output_texture) = PipelineExecutor::new(&pipelines, &self.device, rgb_texture);
+
+                self.anime4k_pipeline = Some((pipeline, output_texture));
+            }
+        } else {
+            // Disable pipeline if Anime4K is turned off
             self.anime4k_pipeline = None;
-            return;
-        }
-
-        let target_width = self.surface_configuration.width;
-        let target_height = self.surface_configuration.height;
-
-        if let Some(rgb_texture) = &self.rgb_texture {
-            // Calculate target scale factor to fit video in window
-            let target_scale_factor = (target_width as f64 / video_width as f64).max(target_height as f64 / video_height as f64);
-
-            // Create Anime4K pipelines with appropriate settings
-            let pipelines = self.current_preset.create_pipelines(self.current_performance_preset, target_scale_factor);
-
-            // Initialize the Anime4K shader pipeline
-            let (pipeline, output_texture) = PipelineExecutor::new(&pipelines, &self.device, rgb_texture);
-
-            self.anime4k_pipeline = Some((pipeline, output_texture));
         }
     }
 
@@ -1019,7 +1018,7 @@ impl Renderer {
     ///
     /// # Arguments
     /// * `preset` - The new Anime4K preset to use
-    pub fn set_anime4k_preset(&mut self, preset: Anime4KPreset) {
+    pub fn set_anime4k_preset(&mut self, preset: Option<Anime4KPreset>) {
         if self.current_preset == preset {
             return;
         }
@@ -1049,7 +1048,7 @@ impl Renderer {
     }
 
     /// Returns the current Anime4K preset
-    pub fn get_current_preset(&self) -> Anime4KPreset {
+    pub fn get_current_preset(&self) -> Option<Anime4KPreset> {
         self.current_preset
     }
 
