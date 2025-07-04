@@ -217,7 +217,7 @@ impl PlayerContext {
         tracing::info!(
             "Anime4K performance preset set to: {} (Anime4K preset is {})",
             performance_preset.name(),
-            self.renderer.get_current_preset().name()
+            self.renderer.get_current_preset().map_or("None", |p| p.name())
         );
 
         self.renderer.set_anime4k_performance_preset(performance_preset);
